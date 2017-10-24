@@ -9,6 +9,17 @@ var utils = require('keystone-utils');
 var RADIUS_KM = 6371;
 var RADIUS_MILES = 3959;
 
+function getAddressComponents(data) {
+	const components = ['country:MX'];
+	// https://developers.google.com/maps/documentation/geocoding/intro#ComponentFiltering
+	if (data.postcode) {
+		components.push(`postal_code:${data.postcode}`);
+	}
+	// locality
+	// administrative_area
+	return components.join('|');
+}
+
 /**
  * Location FieldType Constructor
  */
@@ -42,7 +53,7 @@ function location (list, path, options) {
 
 	// default this.requiredPaths
 	if (!this.requiredPaths) {
-		this.requiredPaths = ['street1', 'suburb'];
+		this.requiredPaths = ['street_address', 'neighborhood'];
 	}
 
 	location.super_.call(this, list, path, options);
@@ -61,9 +72,9 @@ location.prototype.addToSchema = function (schema) {
 	var paths = this.paths = {
 		number: this.path + '.number',
 		name: this.path + '.name',
-		street1: this.path + '.street1',
-		street2: this.path + '.street2',
-		suburb: this.path + '.suburb',
+		street_address: this.path + '.street_address',
+		municipality: this.path + '.municipality',
+		neighborhood: this.path + '.neighborhood',
 		state: this.path + '.state',
 		postcode: this.path + '.postcode',
 		country: this.path + '.country',
@@ -71,6 +82,7 @@ location.prototype.addToSchema = function (schema) {
 		geo_lat: this.path + '.geo_lat',
 		geo_lng: this.path + '.geo_lng',
 		serialised: this.path + '.serialised',
+		place_id: this.path + '.place_id',
 		improve: this.path + '_improve',
 		overwrite: this.path + '_improve_overwrite',
 	};
@@ -87,13 +99,14 @@ location.prototype.addToSchema = function (schema) {
 	schema.add({
 		number: getFieldDef(String, 'number'),
 		name: getFieldDef(String, 'name'),
-		street1: getFieldDef(String, 'street1'),
-		street2: getFieldDef(String, 'street2'),
+		street_address: getFieldDef(String, 'street_address'),
+		municipality: getFieldDef(String, 'municipality'),
 		street3: getFieldDef(String, 'street3'),
-		suburb: getFieldDef(String, 'suburb'),
+		neighborhood: getFieldDef(String, 'neighborhood'),
 		state: getFieldDef(String, 'state'),
 		postcode: getFieldDef(String, 'postcode'),
 		country: getFieldDef(String, 'country'),
+		place_id: getFieldDef(String, 'place_id'),
 		geo: { type: [Number], index: '2dsphere' },
 	}, this.path + '.');
 
@@ -101,12 +114,13 @@ location.prototype.addToSchema = function (schema) {
 		return _.compact([
 			this.get(paths.number),
 			this.get(paths.name),
-			this.get(paths.street1),
-			this.get(paths.street2),
-			this.get(paths.suburb),
+			this.get(paths.street_address),
+			this.get(paths.municipality),
+			this.get(paths.neighborhood),
 			this.get(paths.state),
 			this.get(paths.postcode),
 			this.get(paths.country),
+			this.get(paths.place_id),
 		]).join(', ');
 	});
 
@@ -126,8 +140,8 @@ location.prototype.addToSchema = function (schema) {
  * Add filters to a query
  */
 var FILTER_PATH_MAP = {
-	street: 'street1',
-	city: 'suburb',
+	street: 'street_address',
+	city: 'neighborhood',
 	state: 'state',
 	code: 'postcode',
 	country: 'country',
@@ -169,9 +183,9 @@ location.prototype.format = function (item, values, delimiter) {
 location.prototype.isModified = function (item) {
 	return item.isModified(this.paths.number)
 	|| item.isModified(this.paths.name)
-	|| item.isModified(this.paths.street1)
-	|| item.isModified(this.paths.street2)
-	|| item.isModified(this.paths.suburb)
+	|| item.isModified(this.paths.street_address)
+	|| item.isModified(this.paths.municipality)
+	|| item.isModified(this.paths.neighborhood)
 	|| item.isModified(this.paths.state)
 	|| item.isModified(this.paths.postcode)
 	|| item.isModified(this.paths.country)
@@ -187,9 +201,9 @@ location.prototype.getInputFromData = function (data) {
 		input = {
 			number: data[this.paths.number],
 			name: data[this.paths.name],
-			street1: data[this.paths.street1],
-			street2: data[this.paths.street2],
-			suburb: data[this.paths.suburb],
+			street_address: data[this.paths.street_address],
+			municipality: data[this.paths.municipality],
+			neighborhood: data[this.paths.neighborhood],
 			state: data[this.paths.state],
 			postcode: data[this.paths.postcode],
 			country: data[this.paths.country],
@@ -236,7 +250,7 @@ location.prototype.validateRequiredInput = function (item, data, callback) {
  * Validates that a value for this field has been provided in a data object
  *
  * options.required specifies an array or space-delimited list of paths that
- * are required (defaults to street1, suburb)
+ * are required (defaults to street_address, neighborhood)
  *
  * Deprecated
  */
@@ -272,7 +286,7 @@ location.prototype.inputIsValid = function (data, required, item) {
 location.prototype.updateItem = function (item, data, callback) {
 
 	var paths = this.paths;
-	var fieldKeys = ['number', 'name', 'street1', 'street2', 'suburb', 'state', 'postcode', 'country'];
+	var fieldKeys = ['number', 'name', 'street_address', 'municipality', 'neighborhood', 'state', 'postcode', 'country'];
 	var geoKeys = ['geo', 'geo_lat', 'geo_lng'];
 	var valueKeys = fieldKeys.concat(geoKeys);
 	var valuePaths = valueKeys;
@@ -333,7 +347,7 @@ location.prototype.updateItem = function (item, data, callback) {
 /**
  * Internal Google geocode request method
  */
-function doGoogleGeocodeRequest (address, region, callback) {
+function doGoogleGeocodeRequest (address, components, region, callback) {
 
 	// https://developers.google.com/maps/documentation/geocoding/
 	// Use of the Google Geocoding API is subject to a query limit of 2,500 geolocation requests per day, except with an enterprise license.
@@ -342,8 +356,9 @@ function doGoogleGeocodeRequest (address, region, callback) {
 
 	var options = {
 		sensor: false,
-		language: 'en',
-		address: address,
+		language: 'es',
+		address,
+		components,
 	};
 
 	if (arguments.length === 2 && typeof region === 'function') {
@@ -360,6 +375,7 @@ function doGoogleGeocodeRequest (address, region, callback) {
 	}
 
 	var endpoint = 'https://maps.googleapis.com/maps/api/geocode/json?' + querystring.stringify(options);
+	console.log(endpoint);
 
 	https.get(endpoint, function (res) {
 		var data = [];
@@ -405,7 +421,7 @@ location.prototype.googleLookup = function (item, region, update, callback) {
 
 	var field = this;
 	var stored = item.get(this.path);
-	var address = item.get(this.paths.serialised);
+	var address = stored.street_address ? stored.street_address : '';
 
 	if (address.length === 0) {
 		return callback({
@@ -415,7 +431,10 @@ location.prototype.googleLookup = function (item, region, update, callback) {
 		});
 	}
 
-	doGoogleGeocodeRequest(address, region || keystone.get('default region'), function (err, geocode) {
+	const components = getAddressComponents(stored);
+	//if ('postal_code:56616';
+
+	doGoogleGeocodeRequest(address, components, region || keystone.get('default region'), function (err, geocode) {
 
 		if (err || geocode.status !== 'OK') {
 			return callback(err || new Error(geocode.status + ': ' + geocode.error_message));
@@ -431,18 +450,22 @@ location.prototype.googleLookup = function (item, region, update, callback) {
 
 		_.forEach(result.address_components, function (val) {
 			if (_.indexOf(val.types, 'street_number') >= 0) {
-				location.street1 = [val.long_name];
+				location.street_address = [val.long_name];
 			}
 			if (_.indexOf(val.types, 'route') >= 0) {
-				location.street1 = location.street1 || [];
-				location.street1.push(val.short_name);
+				location.street_address = location.street_address || [];
+				location.street_address.push(val.short_name);
 			}
-			// in some cases, you get suburb, city as locality - so only use the first
-			if (_.indexOf(val.types, 'locality') >= 0 && !location.suburb) {
-				location.suburb = val.long_name;
+			// in some cases, you get neighborhood, city as locality - so only use the first
+			if (_.indexOf(val.types, 'sublocality') >= 0 && !location.neighborhood) {
+				location.neighborhood = val.long_name;
+			}
+			// TODO: find a way to get the "Delegación" value for CDMX
+			if (_.indexOf(val.types, 'locality') >= 0 && val.long_name !== 'Ciudad de México') {
+				location.municipality = val.long_name;
 			}
 			if (_.indexOf(val.types, 'administrative_area_level_1') >= 0) {
-				location.state = val.short_name;
+				location.state = val.long_name;
 			}
 			if (_.indexOf(val.types, 'country') >= 0) {
 				location.country = val.long_name;
@@ -452,8 +475,10 @@ location.prototype.googleLookup = function (item, region, update, callback) {
 			}
 		});
 
-		if (Array.isArray(location.street1)) {
-			location.street1 = location.street1.join(' ');
+		if (Array.isArray(location.street_address) && location.street_address.length === 2) {
+			location.street_address = `${location.street_address[1]} ${location.street_address[0]}`;
+		} else if (Array.isArray(location.street_address)) {
+			location.street_address = location.street_address.join(' ');
 		}
 
 		location.geo = [
@@ -461,14 +486,12 @@ location.prototype.googleLookup = function (item, region, update, callback) {
 			result.geometry.location.lat,
 		];
 
+		location.place_id = result.place_id;
 		// console.log('------ Google Geocode Results ------');
-		// console.log(address);
-		// console.log(result);
-		// console.log(location);
 
-		if (update === 'overwrite') {
+		if (update === 'overwrite' && location.street_address) {
 			item.set(field.path, location);
-		} else if (update) {
+		} else if (update && location.street_address) {
 			_.forEach(location, function (value, key) {
 				if (key === 'geo') {
 					return;
