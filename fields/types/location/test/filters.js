@@ -12,31 +12,31 @@ exports.getTestItems = function () {
 		{},
 		{ loc: {
 			number: 66,
-			street_address: 'Hofburg',
-			municipality: 'Schweizer Trakt',
+			street1: 'Hofburg',
+			street2: 'Schweizer Trakt',
 			city: 'Vienna',
 			postcode: '1010',
 			country: 'Austria',
 		} },
 		{ loc: {
 			number: 191,
-			street_address: 'Clarence St',
+			street1: 'Clarence St',
 			state: 'NSW',
-			neighborhood: 'Sydney',
+			suburb: 'Sydney',
 			postcode: 2000,
 			country: 'Australia',
 		} },
 		{ loc: {
 			number: 61,
-			street_address: 'Albion Street',
+			street1: 'Albion Street',
 			state: 'NSW',
-			neighborhood: 'Surry Hills',
+			suburb: 'Surry Hills',
 			postcode: '2010',
 			country: 'Australia',
 		} },
 		{ loc: {
 			number: 1799,
-			street_address: 'McAllister St',
+			street1: 'McAllister St',
 			state: 'CA',
 			city: 'San Francisco',
 			postcode: '94117',
@@ -55,16 +55,16 @@ exports.testFilters = function (List, filter) {
 			demand(results.length).be(2);
 
 			demand(results[0].number).eql('191');
-			demand(results[0].street_address).eql('Clarence St');
+			demand(results[0].street1).eql('Clarence St');
 			demand(results[0].state).eql('NSW');
-			demand(results[0].neighborhood).eql('Sydney');
+			demand(results[0].suburb).eql('Sydney');
 			demand(results[0].postcode).eql('2000');
 			demand(results[0].country).eql('Australia');
 
 			demand(results[1].number).eql('61');
-			demand(results[1].street_address).eql('Albion Street');
+			demand(results[1].street1).eql('Albion Street');
 			demand(results[1].state).eql('NSW');
-			demand(results[1].neighborhood).eql('Surry Hills');
+			demand(results[1].suburb).eql('Surry Hills');
 			demand(results[1].postcode).eql('2010');
 			demand(results[1].country).eql('Australia');
 

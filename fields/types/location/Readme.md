@@ -24,11 +24,11 @@ Google Places integration requires the `google api key` option to be set for Key
 
 `number` `String` - unit or shop number
 
-`street_address` `String` - street address
+`street1` `String` - street address
 
-`neighborhood` `String` - Colonia for Mexico
+`street2` `String` - street address line 2
 
-`municipality` `String` - Delegación o Municipio in Mexico
+`suburb` `String`
 
 `state` `String`
 

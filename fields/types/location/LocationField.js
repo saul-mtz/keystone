@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import React from 'react';
 import Field from '../Field';
+import CollapsedFieldLabel from '../../components/CollapsedFieldLabel';
 import NestedFormField from '../../components/NestedFormField';
 
 import {
@@ -26,9 +27,31 @@ module.exports = Field.create({
 
 	getInitialState () {
 		return {
-			improve: true,
-			overwrite: true,
+			collapsedFields: {},
+			improve: false,
+			overwrite: false,
 		};
+	},
+
+	componentWillMount () {
+		const { value = [] } = this.props;
+		var collapsedFields = {};
+		_.forEach(['number', 'name', 'street2', 'geo'], (i) => {
+			if (!value[i]) {
+				collapsedFields[i] = true;
+			}
+		}, this);
+		this.setState({ collapsedFields });
+	},
+
+	shouldCollapse () {
+		return this.props.collapse && !this.formatValue();
+	},
+
+	uncollapseFields () {
+		this.setState({
+			collapsedFields: {},
+		});
 	},
 
 	fieldChanged (fieldPath, event) {
@@ -69,9 +92,11 @@ module.exports = Field.create({
 	formatValue () {
 		const { value = {} } = this.props;
 		return _.compact([
-			value.street_address,
-			value.neighborhood,
-			value.municipality,
+			value.number,
+			value.name,
+			value.street1,
+			value.street2,
+			value.suburb,
 			value.state,
 			value.postcode,
 			value.country,
@@ -82,7 +107,10 @@ module.exports = Field.create({
 		return <FormInput noedit>{this.formatValue() || ''}</FormInput>;
 	},
 
-	renderField (fieldPath, label, autoFocus) {
+	renderField (fieldPath, label, collapse, autoFocus) {
+		if (this.state.collapsedFields[fieldPath]) {
+			return null;
+		}
 		const { value = {}, path } = this.props;
 		return (
 			<NestedFormField label={label} data-field-location-path={path + '.' + fieldPath}>
@@ -97,17 +125,17 @@ module.exports = Field.create({
 		);
 	},
 
-	renderMunicipalityState() {
+	renderSuburbState () {
 		const { value = {}, path } = this.props;
 		return (
-			<NestedFormField label="Delegación o Municipio / Estado" data-field-location-path={path + '.municipality_state'}>
+			<NestedFormField label="Suburb / State" data-field-location-path={path + '.suburb_state'}>
 				<Grid.Row gutter={10}>
-					<Grid.Col small="two-thirds" data-field-location-path={path + '.municipality'}>
+					<Grid.Col small="two-thirds" data-field-location-path={path + '.suburb'}>
 						<FormInput
-							name={this.getInputName(path + '.municipality')}
-							onChange={this.makeChanger('municipality')}
+							name={this.getInputName(path + '.suburb')}
+							onChange={this.makeChanger('suburb')}
 							placeholder="Suburb"
-							value={value.municipality || ''}
+							value={value.suburb || ''}
 						/>
 					</Grid.Col>
 					<Grid.Col small="one-third" data-field-location-path={path + '.state'}>
@@ -150,20 +178,17 @@ module.exports = Field.create({
 	},
 
 	renderGeo () {
-		const { value = {}, path, paths } = this.props;
-		const geo = value.geo || [];
-
-		if (geo === []) {
+		if (this.state.collapsedFields.geo) {
 			return null;
 		}
-
+		const { value = {}, path, paths } = this.props;
+		const geo = value.geo || [];
 		return (
 			<NestedFormField label="Lat / Lng" data-field-location-path={path + '.geo'}>
 				<Grid.Row gutter={10}>
 					<Grid.Col small="one-half" data-field-location-path="latitude">
 						<FormInput
 							name={this.getInputName(paths.geo + '[1]')}
-							disabled
 							onChange={this.makeGeoChanger(1)}
 							placeholder="Latitude"
 							value={geo[1] || ''}
@@ -172,7 +197,6 @@ module.exports = Field.create({
 					<Grid.Col small="one-half" data-field-location-path="longitude">
 						<FormInput
 							name={this.getInputName(paths.geo + '[0]')}
-							disabled
 							onChange={this.makeGeoChanger(0)}
 							placeholder="Longitude"
 							value={geo[0] || ''}
@@ -232,18 +256,30 @@ module.exports = Field.create({
 	},
 
 	renderUI () {
+
 		if (!this.shouldRenderField()) {
 			return (
 				<FormField label={this.props.label}>{this.renderValue()}</FormField>
 			);
 		}
 
+		/* eslint-disable no-script-url */
+		var showMore = !_.isEmpty(this.state.collapsedFields)
+			? <CollapsedFieldLabel onClick={this.uncollapseFields}>(show more linked)</CollapsedFieldLabel>
+			: null;
+		/* eslint-enable */
+
 		const { label, path } = this.props;
 		return (
 			<div data-field-name={path} data-field-type="location">
-				{this.renderField('street_address', 'Street Address', true)}
-				{this.renderField('neighborhood', 'Colonia')}
-				{this.renderMunicipalityState()}
+				<FormField label={label} htmlFor={path}>
+					{showMore}
+				</FormField>
+				{this.renderField('number', 'PO Box / Shop', true, true)}
+				{this.renderField('name', 'Building Name', true)}
+				{this.renderField('street1', 'Street Address')}
+				{this.renderField('street2', 'Street Address 2', true)}
+				{this.renderSuburbState()}
 				{this.renderPostcodeCountry()}
 				{this.renderGeo()}
 				{this.renderGoogleOptions()}
