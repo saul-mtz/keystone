@@ -3,14 +3,76 @@ import React from 'react';
 import Field from '../Field';
 import CollapsedFieldLabel from '../../components/CollapsedFieldLabel';
 import NestedFormField from '../../components/NestedFormField';
+import CollapsedFieldLabel from '../../components/CollapsedFieldLabel';
+import Select from 'react-select';
+
 
 import {
+	Button,
 	FormField,
 	FormInput,
 	FormNote,
 	Grid,
 	LabelledControl,
 } from '../../../admin/client/App/elemental';
+
+var querystring = require('querystring');
+
+function doGoogleGeocodeRequest(address, components, region, callback) {
+
+	// https://developers.google.com/maps/documentation/geocoding/
+	// Use of the Google Geocoding API is subject to a query limit of 2,500 geolocation requests per day, except with an enterprise license.
+	// Note: the Geocoding API may only be used in conjunction with a Google map; geocoding results without displaying them on a map is prohibited.
+	// Please make sure your Keystone app complies with the Google Maps API License.
+
+	var options = {
+		sensor: false,
+		language: 'es',
+		address,
+		components,
+	};
+
+	if (arguments.length === 2 && typeof region === 'function') {
+		callback = region;
+		region = null;
+	}
+
+	if (region) {
+		options.region = region;
+	}
+
+	const key = process.env.GOOGLE_SERVER_KEY;
+	if (key) {
+		options.key = key;
+	}
+
+	var endpoint = 'https://maps.googleapis.com/maps/api/geocode/json?' + querystring.stringify(options);
+
+	https.get(endpoint, function (res) {
+		var data = [];
+		res.on('data', function (chunk) {
+			data.push(chunk);
+		})
+			.on('end', function () {
+				var dataBuff = data.join('').trim();
+				var result;
+				try {
+					result = JSON.parse(dataBuff);
+				}
+				catch (exp) {
+					result = {
+						status_code: 500,
+						status_text: 'JSON Parse Failed',
+						status: 'UNKNOWN_ERROR',
+					};
+				}
+				callback(null, result);
+			});
+	})
+		.on('error', function (err) {
+			callback(err);
+		});
+}
 
 /**
  * TODO:
@@ -25,11 +87,11 @@ module.exports = Field.create({
 		type: 'Location',
 	},
 
-	getInitialState () {
+	getInitialState() {
 		return {
-			collapsedFields: {},
-			improve: false,
-			overwrite: false,
+			improve: true,
+			overwrite: true,
+			collapsed: true,
 		};
 	},
 
@@ -67,26 +129,6 @@ module.exports = Field.create({
 
 	makeChanger (fieldPath) {
 		return this.fieldChanged.bind(this, fieldPath);
-	},
-
-	geoChanged (i, event) {
-		const { value = {}, path, onChange } = this.props;
-		const newVal = event.target.value;
-		const geo = [
-			i === 0 ? newVal : value.geo ? value.geo[0] : '',
-			i === 1 ? newVal : value.geo ? value.geo[1] : '',
-		];
-		onChange({
-			path,
-			value: {
-				...value,
-				geo,
-			},
-		});
-	},
-
-	makeGeoChanger (fieldPath) {
-		return this.geoChanged.bind(this, fieldPath);
 	},
 
 	formatValue () {
@@ -177,74 +219,6 @@ module.exports = Field.create({
 		);
 	},
 
-	renderGeo () {
-		if (this.state.collapsedFields.geo) {
-			return null;
-		}
-		const { value = {}, path, paths } = this.props;
-		const geo = value.geo || [];
-		return (
-			<NestedFormField label="Lat / Lng" data-field-location-path={path + '.geo'}>
-				<Grid.Row gutter={10}>
-					<Grid.Col small="one-half" data-field-location-path="latitude">
-						<FormInput
-							name={this.getInputName(paths.geo + '[1]')}
-							onChange={this.makeGeoChanger(1)}
-							placeholder="Latitude"
-							value={geo[1] || ''}
-						/>
-					</Grid.Col>
-					<Grid.Col small="one-half" data-field-location-path="longitude">
-						<FormInput
-							name={this.getInputName(paths.geo + '[0]')}
-							onChange={this.makeGeoChanger(0)}
-							placeholder="Longitude"
-							value={geo[0] || ''}
-						/>
-					</Grid.Col>
-				</Grid.Row>
-			</NestedFormField>
-		);
-	},
-
-	updateGoogleOption (key, e) {
-		var newState = {};
-		newState[key] = e.target.checked;
-		this.setState(newState);
-	},
-
-	makeGoogler (key) {
-		return this.updateGoogleOption.bind(this, key);
-	},
-
-
-	renderGoogleOptions () {
-		const { paths, enableMapsAPI } = this.props;
-		if (!enableMapsAPI) return null;
-		var replace = this.state.improve ? (
-			<LabelledControl
-				checked={this.state.overwrite}
-				label="Replace existing data"
-				name={this.getInputName(paths.overwrite)}
-				onChange={this.makeGoogler('overwrite')}
-				type="checkbox"
-			/>
-		) : null;
-		return (
-			<FormField offsetAbsentLabel>
-				<LabelledControl
-					checked={this.state.improve}
-					label="Autodetect and improve location on save"
-					name={this.getInputName(paths.improve)}
-					onChange={this.makeGoogler('improve')}
-					title="When checked, this will attempt to fill missing fields. It will also get the lat/long"
-					type="checkbox"
-				/>
-				{replace}
-			</FormField>
-		);
-	},
-
 	renderNote () {
 		const { note } = this.props;
 		if (!note) return null;
@@ -255,6 +229,23 @@ module.exports = Field.create({
 		);
 	},
 
+	toggleCollapsed() {
+		const collapsed = !this.state.collapsed;
+		this.setState({ collapsed });
+	},
+
+	getPredictions(input, callback) {
+		if (!input || 'string' !== typeof input || input.length < 3) {
+			return callback(null, []);
+		}
+
+		// function doGoogleGeocodeRequest(address, components, region, callback) {
+		debugger;
+		doGoogleGeocodeRequest(input, {}, 'MX', (error, result) => {
+			callback(err, result);
+		})
+	},
+
 	renderUI () {
 
 		if (!this.shouldRenderField()) {
@@ -262,30 +253,54 @@ module.exports = Field.create({
 				<FormField label={this.props.label}>{this.renderValue()}</FormField>
 			);
 		}
-
-		/* eslint-disable no-script-url */
-		var showMore = !_.isEmpty(this.state.collapsedFields)
-			? <CollapsedFieldLabel onClick={this.uncollapseFields}>(show more linked)</CollapsedFieldLabel>
-			: null;
-		/* eslint-enable */
-
 		const { label, path } = this.props;
-		return (
-			<div data-field-name={path} data-field-type="location">
-				<FormField label={label} htmlFor={path}>
-					{showMore}
-				</FormField>
-				{this.renderField('number', 'PO Box / Shop', true, true)}
-				{this.renderField('name', 'Building Name', true)}
-				{this.renderField('street1', 'Street Address')}
-				{this.renderField('street2', 'Street Address 2', true)}
-				{this.renderSuburbState()}
-				{this.renderPostcodeCountry()}
-				{this.renderGeo()}
-				{this.renderGoogleOptions()}
-				{this.renderNote()}
-			</div>
-		);
+		console.log('this', this);
+
+		if (this.state.collapsed) {
+			return (
+				<div data-field-name={path} data-field-type="location">
+					<FormField label={label} htmlFor={path}>
+						<Grid.Row gutter={10}>
+							<Grid.Col small="four-fifths">
+								<Select.Async
+									loadOptions={this.getPredictions}
+									name={this.getInputName(this.props.path)}
+									onChange={this.valueChanged}
+									simpleValue
+									valueKey="id"
+								/>
+							</Grid.Col>
+							<Grid.Col small="one-fifth">
+								<CollapsedFieldLabel onClick={this.toggleCollapsed}>
+									Enter Manually
+								</CollapsedFieldLabel>
+							</Grid.Col>
+						</Grid.Row>
+					</FormField>
+					{this.renderNote()}
+				</div>
+			);
+		} else {
+			return (
+				<div data-field-name={path} data-field-type="location">
+					<FormField label={label} htmlFor={path}>
+						<span style={{marginLeft: '1em' }}>
+							<CollapsedFieldLabel onClick={this.toggleCollapsed}>
+								Use Autocomplete
+							</CollapsedFieldLabel>
+						</span>
+						<div style={{ border: 'solid 1px #ccc', padding: '0.4rem 0.6rem', borderRadius: '0.3rem' }}>
+							{this.renderField('street_address', 'Street Address', true)}
+							{this.renderField('neighborhood', 'Colonia')}
+							{this.renderMunicipalityState()}
+							{this.renderPostcodeCountry()}
+							{this.renderGeo()}
+						</div>
+					</FormField>
+					{this.renderNote()}
+				</div>
+			);
+		}
 	},
 
 });
