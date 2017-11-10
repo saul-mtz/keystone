@@ -87,6 +87,8 @@ module.exports = function IndexRoute (req, res) {
 		locals.cloudinaryScript = cloudinary.cloudinary_js_config();
 	};
 
+	locals.google_api_key = keystone.get('google api key');
+
 	ejs.renderFile(templatePath, locals, {}, function (err, str) {
 		if (err) {
 			console.error('Could not render Admin UI Index Template:', err);

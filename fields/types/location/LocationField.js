@@ -1,11 +1,10 @@
 import _ from 'lodash';
 import React from 'react';
 import Field from '../Field';
-import CollapsedFieldLabel from '../../components/CollapsedFieldLabel';
 import NestedFormField from '../../components/NestedFormField';
 import CollapsedFieldLabel from '../../components/CollapsedFieldLabel';
+import theme from '../../../admin/client/theme';
 import Select from 'react-select';
-
 
 import {
 	Button,
@@ -16,63 +15,49 @@ import {
 	LabelledControl,
 } from '../../../admin/client/App/elemental';
 
-var querystring = require('querystring');
 
-function doGoogleGeocodeRequest(address, components, region, callback) {
+const formatAddress = (result) => {
+	const location = {};
 
-	// https://developers.google.com/maps/documentation/geocoding/
-	// Use of the Google Geocoding API is subject to a query limit of 2,500 geolocation requests per day, except with an enterprise license.
-	// Note: the Geocoding API may only be used in conjunction with a Google map; geocoding results without displaying them on a map is prohibited.
-	// Please make sure your Keystone app complies with the Google Maps API License.
+	_.forEach(result.address_components, function (val) {
+		if (_.indexOf(val.types, 'street_number') >= 0) {
+			location.street_number = val.long_name;
+		}
+		if (_.indexOf(val.types, 'route') >= 0) {
+			location.street_name = val.long_name;
+		}
+		// in some cases, you get sublocality, city as locality - so only use the first
+		if (_.indexOf(val.types, 'sublocality') >= 0 && !location.sublocality) {
+			location.sublocality = val.long_name;
+		}
+		// TODO: find a way to get the "Delegación" value for CDMX
+		if (_.indexOf(val.types, 'locality') >= 0 && val.long_name !== 'Ciudad de México') {
+			location.locality = val.long_name;
+		}
+		if (_.indexOf(val.types, 'administrative_area_level_1') >= 0) {
+			location.state = val.long_name;
+		}
+		if (_.indexOf(val.types, 'country') >= 0) {
+			location.country = val.long_name;
+		}
+		if (_.indexOf(val.types, 'postal_code') >= 0) {
+			location.postal_code = val.long_name;
+		}
+	});
 
-	var options = {
-		sensor: false,
-		language: 'es',
-		address,
-		components,
-	};
+	// https://stackoverflow.com/a/15714477/2938519
+	// lng,lat
+	location.geo = `${result.geometry.location.lng()},${result.geometry.location.lat()}`;
+	location.place_id = result.place_id;
+	location.formatted = result.formatted_address;
 
-	if (arguments.length === 2 && typeof region === 'function') {
-		callback = region;
-		region = null;
+	if (location.street_name) {
+		return location;
 	}
 
-	if (region) {
-		options.region = region;
-	}
-
-	const key = process.env.GOOGLE_SERVER_KEY;
-	if (key) {
-		options.key = key;
-	}
-
-	var endpoint = 'https://maps.googleapis.com/maps/api/geocode/json?' + querystring.stringify(options);
-
-	https.get(endpoint, function (res) {
-		var data = [];
-		res.on('data', function (chunk) {
-			data.push(chunk);
-		})
-			.on('end', function () {
-				var dataBuff = data.join('').trim();
-				var result;
-				try {
-					result = JSON.parse(dataBuff);
-				}
-				catch (exp) {
-					result = {
-						status_code: 500,
-						status_text: 'JSON Parse Failed',
-						status: 'UNKNOWN_ERROR',
-					};
-				}
-				callback(null, result);
-			});
-	})
-		.on('error', function (err) {
-			callback(err);
-		});
+	return {};
 }
+
 
 /**
  * TODO:
@@ -83,37 +68,20 @@ function doGoogleGeocodeRequest(address, components, region, callback) {
 module.exports = Field.create({
 
 	displayName: 'LocationField',
-	statics: {
-		type: 'Location',
-	},
+	statics: { type: 'Location' },
 
 	getInitialState() {
 		return {
-			improve: true,
-			overwrite: true,
 			collapsed: true,
+			inputMode: 'autocomplete', // autocomplete | manual
 		};
 	},
 
-	componentWillMount () {
-		const { value = [] } = this.props;
-		var collapsedFields = {};
-		_.forEach(['number', 'name', 'street2', 'geo'], (i) => {
-			if (!value[i]) {
-				collapsedFields[i] = true;
-			}
-		}, this);
-		this.setState({ collapsedFields });
-	},
-
-	shouldCollapse () {
-		return this.props.collapse && !this.formatValue();
-	},
-
-	uncollapseFields () {
-		this.setState({
-			collapsedFields: {},
-		});
+	componentDidMount () {
+		// init the Google Autocomplete service
+		// https://developers.google.com/maps/documentation/javascript/places-autocomplete#place_autocomplete_service
+		this.googleAutocompleteService = new google.maps.places.AutocompleteService();
+		this.googlePlacesService = new google.maps.places.PlacesService(document.getElementById("carengo-map"));
 	},
 
 	fieldChanged (fieldPath, event) {
@@ -127,94 +95,64 @@ module.exports = Field.create({
 		});
 	},
 
-	makeChanger (fieldPath) {
+	makeChanger(fieldPath) {
 		return this.fieldChanged.bind(this, fieldPath);
 	},
 
-	formatValue () {
+	formatValue() {
 		const { value = {} } = this.props;
+		debugger;
+
+		if (value.formatted) {
+			return value.formatted;
+		}
+
 		return _.compact([
-			value.number,
-			value.name,
-			value.street1,
-			value.street2,
-			value.suburb,
+			value.street_name,
+			value.street_number,
+			value.sublocality,
+			value.locality,
 			value.state,
-			value.postcode,
+			value.postal_code,
 			value.country,
 		]).join(', ');
 	},
 
-	renderValue () {
+	renderValue() {
 		return <FormInput noedit>{this.formatValue() || ''}</FormInput>;
 	},
 
-	renderField (fieldPath, label, collapse, autoFocus) {
-		if (this.state.collapsedFields[fieldPath]) {
-			return null;
+	isFieldDisabled({ fieldPath, value }) {
+		if (['country', 'place_id', 'geo'].indexOf(fieldPath) !== -1) {
+			return true;
 		}
-		const { value = {}, path } = this.props;
+		console.log(fieldPath, this.place[fieldPath], !!this.place[fieldPath]);
+		return !!this.place[fieldPath];
+	},
+
+	renderField(fieldPath, label) {
+		const { value:currentValue = {}, path } = this.props;
+		const { inputMode } = this.state;
+
+		const value = currentValue[fieldPath] || '';
+		const name = this.getInputName(`${path}.${fieldPath}`);
+		const key = `${name}-${autoFocus}`;
+		const disabled = this.isFieldDisabled({ fieldPath, value });
+		const style = disabled ? {} : { borderColor: theme.color.danger };
+		const autoFocus = false;
+
 		return (
 			<NestedFormField label={label} data-field-location-path={path + '.' + fieldPath}>
 				<FormInput
 					autoFocus={autoFocus}
-					name={this.getInputName(path + '.' + fieldPath)}
+					readOnly={disabled}
+					disabled={disabled}
+					name={name}
 					onChange={this.makeChanger(fieldPath)}
 					placeholder={label}
-					value={value[fieldPath] || ''}
+					value={value}
+					style={style}
 				/>
-			</NestedFormField>
-		);
-	},
-
-	renderSuburbState () {
-		const { value = {}, path } = this.props;
-		return (
-			<NestedFormField label="Suburb / State" data-field-location-path={path + '.suburb_state'}>
-				<Grid.Row gutter={10}>
-					<Grid.Col small="two-thirds" data-field-location-path={path + '.suburb'}>
-						<FormInput
-							name={this.getInputName(path + '.suburb')}
-							onChange={this.makeChanger('suburb')}
-							placeholder="Suburb"
-							value={value.suburb || ''}
-						/>
-					</Grid.Col>
-					<Grid.Col small="one-third" data-field-location-path={path + '.state'}>
-						<FormInput
-							name={this.getInputName(path + '.state')}
-							onChange={this.makeChanger('state')}
-							placeholder="State"
-							value={value.state || ''}
-						/>
-					</Grid.Col>
-				</Grid.Row>
-			</NestedFormField>
-		);
-	},
-
-	renderPostcodeCountry () {
-		const { value = {}, path } = this.props;
-		return (
-			<NestedFormField label="Postcode / Country" data-field-location-path={path + '.postcode_country'}>
-				<Grid.Row gutter={10}>
-					<Grid.Col small="one-third" data-field-location-path={path + '.postcode'}>
-						<FormInput
-							name={this.getInputName(path + '.postcode')}
-							onChange={this.makeChanger('postcode')}
-							placeholder="Post Code"
-							value={value.postcode || ''}
-						/>
-					</Grid.Col>
-					<Grid.Col small="two-thirds" data-field-location-path={path + '.country'}>
-						<FormInput
-							name={this.getInputName(path + '.country')}
-							onChange={this.makeChanger('country')}
-							placeholder="Country"
-							value={value.country || ''}
-						/>
-					</Grid.Col>
-				</Grid.Row>
 			</NestedFormField>
 		);
 	},
@@ -234,73 +172,201 @@ module.exports = Field.create({
 		this.setState({ collapsed });
 	},
 
-	getPredictions(input, callback) {
-		if (!input || 'string' !== typeof input || input.length < 3) {
-			return callback(null, []);
+	toggleInputMode() {
+		const { inputMode, collapsed } = this.state;
+		let updatedState;
+		if ('autocomplete' === inputMode) {
+			updatedState = {
+				inputMode: 'manual',
+				collapsed: false,
+			};
+		} else {
+			updatedState = {
+				inputMode: 'autocomplete',
+				collapsed: true,
+			};
+		}
+		this.setState(updatedState);
+	},
+
+	onPlaceChosen(placeId) {
+		const { value = {}, path, onChange } = this.props;
+
+		// the user clear the filed
+		if (!placeId) {
+			return this.setState({ collapsed: true}, () => onChange({ path }));
 		}
 
-		// function doGoogleGeocodeRequest(address, components, region, callback) {
-		debugger;
-		doGoogleGeocodeRequest(input, {}, 'MX', (error, result) => {
-			callback(err, result);
+		const self = this;
+		// https://developers.google.com/maps/documentation/javascript/reference#PlaceResult
+		this.googlePlacesService.getDetails({ placeId }, function(placeResult, placesServiceStatus) {
+			const value = formatAddress(placeResult);
+			self.place = value;
+			console.log('onPlaceChosen()', { placeId, placeResult, placeFormatted:value });
+			self.setState({ collapsed: false }, () => {
+				onChange({ path, value });
+			});
 		})
 	},
 
-	renderUI () {
+	getPredictions(input, callback) {
+		if (!input || 'string' !== typeof input || input.length < 3) {
+			return callback(null, { options: [] });
+		}
 
+		const autocompletionRequest = {
+			input,
+			componentRestrictions: { country: 'MX' },
+			types: [ 'address' ],
+		};
+
+		this.googleAutocompleteService.getPlacePredictions(autocompletionRequest, function(predictions, status) {
+			if (status != google.maps.places.PlacesServiceStatus.OK) {
+				console.error({ predictions, status });
+				return callback(null, { options: [] });
+			}
+
+			const options = predictions
+				.filter(place => {
+					return place.types && place.types.indexOf('street_address') !== -1;
+				})
+				.map(place => ({
+					value: place.place_id,
+					label: place.description,
+				}));
+
+			callback(null, { options });
+		});
+	},
+
+	renderAddressFields() {
+		const { inputMode, collapsed } = this.state;
+		const autocomplete = 'autocomplete' === inputMode;
+
+		if (autocomplete && collapsed) {
+			return null;
+		}
+
+		const style = {
+			border: 'solid 1px #ccc',
+			borderRadius: '0.3rem',
+			padding: '0.4rem 0.6rem',
+			marginTop: autocomplete ? '1em' : 'auto',
+			width: '100%',
+		};
+		// renderField(fieldPath, label, disabled, focus) {
+		return (
+			<div style={style}>
+				{this.renderField('street_name', 'Street Name')}
+				{this.renderField('street_number', 'Street Number')}
+				{this.renderField('sublocality', 'Sublocality (Colonia)')}
+				{this.renderField('locality', 'Locality (Delegación/Municipio)')}
+				{this.renderField('state', 'State')}
+				{this.renderField('postal_code', 'Postcode')}
+				{this.renderField('country', 'Country')}
+				{this.renderField('place_id', 'Place Id')}
+				{this.renderField('geo', 'Coordinates')}
+			</div>
+		);
+	},
+
+	renderAutocompleteInput() {
+		if (this.state.inputMode === 'manual') {
+			return null;
+		}
+
+		const { path, value } = this.props;
+		let defaultValue = null;
+		if (value && value.formatted) {
+			defaultValue = {
+				label: <a href={`https://www.google.com/maps/place/?q=place_id:${value.place_id}`} target="_blank">{value.formatted}</a>,
+				value: value.formatted
+			};
+		}
+
+		/*
+		return (
+			<Grid.Row gutter={10}>
+				<Grid.Col small="four-fifths">
+					<Select.Async
+						arrowRenderer={null}
+						loadOptions={this.getPredictions}
+						name={this.getInputName(`${path}.formatted`)}
+						onChange={this.onPlaceChosen}
+						value={defaultValue}
+						simpleValue
+					/>
+				</Grid.Col>
+				<Grid.Col small="one-fifth">
+					<CollapsedFieldLabel onClick={this.toggleInputMode}>
+						Enter Manually
+					</CollapsedFieldLabel>
+				</Grid.Col>
+			</Grid.Row>
+		)
+		*/
+
+		return (
+			<Select.Async
+				arrowRenderer={null}
+				loadOptions={this.getPredictions}
+				name={this.getInputName(`${path}.formatted`)}
+				onChange={this.onPlaceChosen}
+				value={defaultValue}
+				simpleValue
+			/>
+		);
+	},
+
+	renderLinks() {
+		const { inputMode, collapsed } = this.state;
+		let switchTo = null;
+
+		if ('manual' === inputMode ) {
+			switchTo = (
+				<span style={{marginLeft: '1em' }}>
+					<CollapsedFieldLabel onClick={this.toggleInputMode}>
+						Use Autocomplete
+					</CollapsedFieldLabel>
+				</span>
+			);
+		}
+
+		let showAll = null;
+		if (collapsed) {
+			<span style={{marginLeft: '1em' }}>
+				<CollapsedFieldLabel onClick={this.toggleCollapsed}>
+					Show All Fields
+				</CollapsedFieldLabel>
+			</span>
+		}
+
+		return (
+			<div style={{ display: 'inline-block' }}>
+				{switchTo}
+				{showAll}
+			</div>
+		);
+	},
+
+	renderUI () {
+		const { label, path, required } = this.props;
+		this.firstWithErrorsFocused = false;
 		if (!this.shouldRenderField()) {
 			return (
 				<FormField label={this.props.label}>{this.renderValue()}</FormField>
 			);
 		}
-		const { label, path } = this.props;
-		console.log('this', this);
 
-		if (this.state.collapsed) {
-			return (
-				<div data-field-name={path} data-field-type="location">
-					<FormField label={label} htmlFor={path}>
-						<Grid.Row gutter={10}>
-							<Grid.Col small="four-fifths">
-								<Select.Async
-									loadOptions={this.getPredictions}
-									name={this.getInputName(this.props.path)}
-									onChange={this.valueChanged}
-									simpleValue
-									valueKey="id"
-								/>
-							</Grid.Col>
-							<Grid.Col small="one-fifth">
-								<CollapsedFieldLabel onClick={this.toggleCollapsed}>
-									Enter Manually
-								</CollapsedFieldLabel>
-							</Grid.Col>
-						</Grid.Row>
-					</FormField>
-					{this.renderNote()}
-				</div>
-			);
-		} else {
-			return (
-				<div data-field-name={path} data-field-type="location">
-					<FormField label={label} htmlFor={path}>
-						<span style={{marginLeft: '1em' }}>
-							<CollapsedFieldLabel onClick={this.toggleCollapsed}>
-								Use Autocomplete
-							</CollapsedFieldLabel>
-						</span>
-						<div style={{ border: 'solid 1px #ccc', padding: '0.4rem 0.6rem', borderRadius: '0.3rem' }}>
-							{this.renderField('street_address', 'Street Address', true)}
-							{this.renderField('neighborhood', 'Colonia')}
-							{this.renderMunicipalityState()}
-							{this.renderPostcodeCountry()}
-							{this.renderGeo()}
-						</div>
-					</FormField>
-					{this.renderNote()}
-				</div>
-			);
-		}
+		return (
+			<div data-field-name={path} data-field-type="location">
+				<div id="carengo-map"/>
+				<FormField label={label} htmlFor={path}>
+					{this.renderAutocompleteInput()}
+					{this.renderAddressFields()}
+				</FormField>
+				{this.renderNote()}
+			</div>
+		);
 	},
-
 });

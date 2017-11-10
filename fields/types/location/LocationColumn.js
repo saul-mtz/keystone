@@ -2,7 +2,7 @@ import React from 'react';
 import ItemsTableCell from '../../components/ItemsTableCell';
 import ItemsTableValue from '../../components/ItemsTableValue';
 
-const SUB_FIELDS = ['street1', 'suburb', 'state', 'postcode', 'country'];
+const SUB_FIELDS = ['street', 'suburb', 'state', 'postal_code', 'country'];
 
 var LocationColumn = React.createClass({
 	displayName: 'LocationColumn',
@@ -28,6 +28,7 @@ var LocationColumn = React.createClass({
 		);
 	},
 	render () {
+		debugger;
 		return (
 			<ItemsTableCell>
 				{this.renderValue()}

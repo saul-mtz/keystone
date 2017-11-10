@@ -24,15 +24,13 @@ Google Places integration requires the `google api key` option to be set for Key
 
 `number` `String` - unit or shop number
 
-`street1` `String` - street address
-
-`street2` `String` - street address line 2
+`street` `String` - street address
 
 `suburb` `String`
 
 `state` `String`
 
-`postcode` `String`
+`postal_code` `String`
 
 `country` `String`
 
