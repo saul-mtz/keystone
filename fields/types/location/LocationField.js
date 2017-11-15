@@ -1,3 +1,4 @@
+/* global google */
 import _ from 'lodash';
 import React from 'react';
 import Field from '../Field';
@@ -7,12 +8,9 @@ import theme from '../../../admin/client/theme';
 import Select from 'react-select';
 
 import {
-	Button,
 	FormField,
 	FormInput,
 	FormNote,
-	Grid,
-	LabelledControl,
 } from '../../../admin/client/App/elemental';
 
 
@@ -95,14 +93,12 @@ module.exports = Field.create({
 		});
 	},
 
-	makeChanger(fieldPath) {
+	makeChanger (fieldPath) {
 		return this.fieldChanged.bind(this, fieldPath);
 	},
 
-	formatValue() {
+	formatValue () {
 		const { value = {} } = this.props;
-		debugger;
-
 		if (value.formatted) {
 			return value.formatted;
 		}
@@ -118,11 +114,11 @@ module.exports = Field.create({
 		]).join(', ');
 	},
 
-	renderValue() {
+	renderValue () {
 		return <FormInput noedit>{this.formatValue() || ''}</FormInput>;
 	},
 
-	isFieldDisabled({ fieldPath, value }) {
+	isFieldDisabled ({ fieldPath, value }) {
 		if (['country', 'place_id', 'geo'].indexOf(fieldPath) !== -1) {
 			return true;
 		}
@@ -130,13 +126,10 @@ module.exports = Field.create({
 		return !!this.place[fieldPath];
 	},
 
-	renderField(fieldPath, label) {
-		const { value:currentValue = {}, path } = this.props;
-		const { inputMode } = this.state;
-
+	renderField (fieldPath, label) {
+		const { value: currentValue = {}, path } = this.props;
 		const value = currentValue[fieldPath] || '';
 		const name = this.getInputName(`${path}.${fieldPath}`);
-		const key = `${name}-${autoFocus}`;
 		const disabled = this.isFieldDisabled({ fieldPath, value });
 		const style = disabled ? {} : { borderColor: theme.color.danger };
 		const autoFocus = false;
@@ -167,15 +160,15 @@ module.exports = Field.create({
 		);
 	},
 
-	toggleCollapsed() {
+	toggleCollapsed () {
 		const collapsed = !this.state.collapsed;
 		this.setState({ collapsed });
 	},
 
-	toggleInputMode() {
-		const { inputMode, collapsed } = this.state;
+	toggleInputMode () {
+		const { inputMode } = this.state;
 		let updatedState;
-		if ('autocomplete' === inputMode) {
+		if (inputMode === 'autocomplete') {
 			updatedState = {
 				inputMode: 'manual',
 				collapsed: false,
@@ -189,47 +182,44 @@ module.exports = Field.create({
 		this.setState(updatedState);
 	},
 
-	onPlaceChosen(placeId) {
-		const { value = {}, path, onChange } = this.props;
+	onPlaceChosen (placeId) {
+		const { path, onChange } = this.props;
 
 		// the user clear the filed
 		if (!placeId) {
-			return this.setState({ collapsed: true}, () => onChange({ path }));
+			return this.setState({ collapsed: true }, () => onChange({ path }));
 		}
 
 		const self = this;
 		// https://developers.google.com/maps/documentation/javascript/reference#PlaceResult
-		this.googlePlacesService.getDetails({ placeId }, function(placeResult, placesServiceStatus) {
+		this.googlePlacesService.getDetails({ placeId }, function (placeResult, placesServiceStatus) {
 			const value = formatAddress(placeResult);
 			self.place = value;
-			console.log('onPlaceChosen()', { placeId, placeResult, placeFormatted:value });
 			self.setState({ collapsed: false }, () => {
 				onChange({ path, value });
 			});
-		})
+		});
 	},
 
-	getPredictions(input, callback) {
-		if (!input || 'string' !== typeof input || input.length < 3) {
+	getPredictions (input, callback) {
+		if (!input || typeof input !== 'string' || input.length < 3) {
 			return callback(null, { options: [] });
 		}
 
 		const autocompletionRequest = {
 			input,
 			componentRestrictions: { country: 'MX' },
-			types: [ 'address' ],
+			types: ['address'],
 		};
 
 		this.googleAutocompleteService.getPlacePredictions(autocompletionRequest, function(predictions, status) {
-			if (status != google.maps.places.PlacesServiceStatus.OK) {
+			if (status !== google.maps.places.PlacesServiceStatus.OK) {
 				console.error({ predictions, status });
 				return callback(null, { options: [] });
 			}
 
 			const options = predictions
-				.filter(place => {
-					return place.types && place.types.indexOf('street_address') !== -1;
-				})
+				.filter(place => place.types && (place.types.indexOf('street_address') !== -1 || place.types.indexOf('route') !== -1))
 				.map(place => ({
 					value: place.place_id,
 					label: place.description,
@@ -239,9 +229,9 @@ module.exports = Field.create({
 		});
 	},
 
-	renderAddressFields() {
+	renderAddressFields () {
 		const { inputMode, collapsed } = this.state;
-		const autocomplete = 'autocomplete' === inputMode;
+		const autocomplete = inputMode === 'autocomplete';
 
 		if (autocomplete && collapsed) {
 			return null;
@@ -319,13 +309,13 @@ module.exports = Field.create({
 		);
 	},
 
-	renderLinks() {
+	renderLinks () {
 		const { inputMode, collapsed } = this.state;
 		let switchTo = null;
 
-		if ('manual' === inputMode ) {
+		if (inputMode === 'manual') {
 			switchTo = (
-				<span style={{marginLeft: '1em' }}>
+				<span style={{ marginLeft: '1em' }}>
 					<CollapsedFieldLabel onClick={this.toggleInputMode}>
 						Use Autocomplete
 					</CollapsedFieldLabel>
@@ -335,11 +325,13 @@ module.exports = Field.create({
 
 		let showAll = null;
 		if (collapsed) {
-			<span style={{marginLeft: '1em' }}>
-				<CollapsedFieldLabel onClick={this.toggleCollapsed}>
-					Show All Fields
-				</CollapsedFieldLabel>
-			</span>
+			return (
+				<span style={{ marginLeft: '1em' }}>
+					<CollapsedFieldLabel onClick={this.toggleCollapsed}>
+						Show All Fields
+					</CollapsedFieldLabel>
+				</span>
+			);
 		}
 
 		return (
@@ -351,7 +343,7 @@ module.exports = Field.create({
 	},
 
 	renderUI () {
-		const { label, path, required } = this.props;
+		const { label, path } = this.props;
 		this.firstWithErrorsFocused = false;
 		if (!this.shouldRenderField()) {
 			return (
