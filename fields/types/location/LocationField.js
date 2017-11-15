@@ -312,6 +312,7 @@ module.exports = Field.create({
 				loadOptions={this.getPredictions}
 				name={this.getInputName(`${path}.formatted`)}
 				onChange={this.onPlaceChosen}
+				placeholder="Type the address ..."
 				value={defaultValue}
 				simpleValue
 			/>
