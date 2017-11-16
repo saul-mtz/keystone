@@ -170,7 +170,12 @@ password.prototype.validateInput = function (data, callback) {
 	var confirmValue = this.getValueFromData(data, '_confirm');
 	var passwordValue = this.getValueFromData(data);
 
-	var validation = validate(passwordValue, confirmValue, min, max, complexity, rejectCommon);
+	var validation;
+	if (!this.options.required && undefined === passwordValue) {
+		validation = { result: true };
+	} else {
+		validation = validate(passwordValue, confirmValue, min, max, complexity, rejectCommon);
+	}
 
 	utils.defer(callback, validation.result, validation.detail);
 };
