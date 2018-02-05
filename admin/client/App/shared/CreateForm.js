@@ -122,6 +122,7 @@ const CreateForm = React.createClass({
 		if (list.nameIsInitial) {
 			var nameFieldProps = this.getFieldProps(nameField);
 			nameFieldProps.autoFocus = focusWasSet = true;
+
 			if (nameField.type === 'text') {
 				nameFieldProps.className = 'item-name-field';
 				nameFieldProps.placeholder = nameField.label;

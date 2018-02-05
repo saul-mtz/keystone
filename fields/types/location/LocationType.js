@@ -1,8 +1,6 @@
 var _ = require('lodash');
 var FieldType = require('../Type');
-var https = require('https');
 var keystone = require('../../../');
-var querystring = require('querystring');
 var util = require('util');
 var utils = require('keystone-utils');
 
@@ -16,7 +14,7 @@ const addressComponents = [
 	'country',
 	'place_id',
 	'geo',
-	'formatted'
+	'formatted',
 ];
 
 /**
@@ -24,7 +22,7 @@ const addressComponents = [
  */
 function location (list, path, options) {
 
-	this._underscoreMethods = ['format' ];
+	this._underscoreMethods = ['format'];
 	this._fixedSize = 'full';
 
 	if (!keystone.get('google server api key')) {
@@ -66,8 +64,8 @@ location.prototype.addToSchema = function (schema) {
 
 	var paths = this.paths = {};
 	addressComponents.forEach(component => {
-		paths[component] = `${this.path}.${component}`
-	})
+		paths[component] = `${this.path}.${component}`;
+	});
 
 	var getFieldDef = function (type, key) {
 		var def = { type: type };
@@ -86,8 +84,6 @@ location.prototype.addToSchema = function (schema) {
 	});
 
 	toAdd.geo = { type: [Number], index: '2dsphere' };
-	const oldStr = this.path + '.';
-	const newStr = `${this.path}.`;
 
 	schema.add(toAdd, `${this.path}.`);
 
@@ -95,22 +91,12 @@ location.prototype.addToSchema = function (schema) {
 	// see http://stackoverflow.com/questions/16388836/does-applying-a-2dsphere-index-on-a-mongoose-schema-force-the-location-field-to
 	schema.pre('save', function (next) {
 		var obj = field._path.get(this);
-		var geo = (obj.geo|| []).map(Number).filter(_.isFinite);
+		var geo = (obj.geo || []).map(Number).filter(_.isFinite);
 		obj.geo = (geo.length === 2) ? geo : undefined;
 		next();
 	});
 
 	this.bindUnderscoreMethods();
-};
-
-/**
- * Add filters to a query
- */
-var FILTER_PATH_MAP = {
-	street: 'street',
-	city: 'suburb',
-	state: 'state',
-	code: 'postal_code',
 };
 
 location.prototype.addFilterToQuery = function (filter) {
@@ -144,7 +130,7 @@ location.prototype.addFilterToQuery = function (filter) {
 location.prototype.format = function (item, values, delimiter) {
 	if (!values) {
 		throw new Error('check this');
-		return item.get(this.paths.serialised);
+		// return item.get(this.paths.serialised);
 	}
 	var paths = this.paths;
 	values = values.split(' ').map(function (i) {

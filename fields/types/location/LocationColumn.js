@@ -28,7 +28,6 @@ var LocationColumn = React.createClass({
 		);
 	},
 	render () {
-		debugger;
 		return (
 			<ItemsTableCell>
 				{this.renderValue()}

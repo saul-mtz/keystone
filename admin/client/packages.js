@@ -14,6 +14,7 @@ module.exports = [
 	'display-name',
 	'elemental',
 	'expression-match',
+	'fsm-as-promised',
 	'i',
 	'list-to-array',
 	'lodash',

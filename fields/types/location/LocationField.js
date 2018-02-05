@@ -12,6 +12,7 @@ import {
 	FormInput,
 	FormNote,
 } from '../../../admin/client/App/elemental';
+import { setTimeout } from 'timers';
 
 
 const formatAddress = (result) => {
@@ -68,18 +69,28 @@ module.exports = Field.create({
 	displayName: 'LocationField',
 	statics: { type: 'Location' },
 
-	getInitialState() {
+	getInitialState () {
 		return {
 			collapsed: true,
 			inputMode: 'autocomplete', // autocomplete | manual
 		};
 	},
 
-	componentDidMount () {
+	initGoogle () {
 		// init the Google Autocomplete service
 		// https://developers.google.com/maps/documentation/javascript/places-autocomplete#place_autocomplete_service
-		this.googleAutocompleteService = new google.maps.places.AutocompleteService();
-		this.googlePlacesService = new google.maps.places.PlacesService(document.getElementById("carengo-map"));
+		this.googleAutocompleteService = new google.maps.places.AutocompleteService() || null;
+		this.googlePlacesService = new google.maps.places.PlacesService(document.getElementById('carengo-map')) || null;
+	},
+
+	componentDidMount () {
+		if (!window.google) {
+			setTimeout(() => {
+				this.initGoogle();
+			}, 2000);
+		} else {
+			this.initGoogle();
+		}
 	},
 
 	fieldChanged (fieldPath, event) {
@@ -155,7 +166,7 @@ module.exports = Field.create({
 		if (!note) return null;
 		return (
 			<FormField offsetAbsentLabel>
-				<FormNote note={note} />
+				<FormNote html={note} />
 			</FormField>
 		);
 	},
