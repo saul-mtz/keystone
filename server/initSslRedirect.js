@@ -4,12 +4,18 @@ module.exports = function (keystone, app) {
 		if (proto === 'https') {
 			next();
 		} else {
-			// Don't redirect connections from localhost
-			if (req.ip === '127.0.0.1') {
+			const { hostname, ip, originalUrl } = req;
+			if (ip === '127.0.0.1') {
+				// Don't redirect connections from localhost
+				return next();
+			} else if (/^10\.0\.[\d\.]+$/.test(ip)) {
+				// AWS EBL: query for healthchecks
+				console.log(`AWS EBL? req.ip: ${ip}, req.hostname: ${hostname}`);
 				return next();
 			} else {
-				console.error('redirect to https://' + req.hostname + req.originalUrl);
-				res.redirect('https://' + req.hostname + req.originalUrl);
+				const redirectTo = `https://${hostname}${originalUrl}`;
+				console.error(`req.ip: ${ip}, req.hostname: ${hostname}, redirect to ${redirectTo}`);
+				res.redirect(redirectTo);
 			}
 		}
 	};
