@@ -31,7 +31,7 @@ const fnFieldTypeGetOptions = FieldType.prototype.getOptions;
 rentstatus.prototype.getOptions = function () {
 	const stateMachine = { config: this.options.config };
 	return Object.assign({ stateMachine }, fnFieldTypeGetOptions.call(this));
-}
+};
 
 /**
  * Registers the field on the List's Mongoose Schema.
@@ -69,7 +69,7 @@ rentstatus.prototype.addFilterToQuery = function (filter) {
 rentstatus.prototype.validateInput = function (data, callback) {
 	const valueRaw = this.getValueFromData(data);
 	let isValid = true;
-	if (valueRaw) {
+	if (valueRaw && typeof valueRaw === 'string' && valueRaw[0] === '{') {
 		const parsed = JSON.parse(valueRaw);
 		isValid = typeof parsed === 'object' && parsed.event && typeof parsed.event === 'object';
 	}
