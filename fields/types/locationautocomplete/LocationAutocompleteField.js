@@ -14,6 +14,7 @@ import {
 } from '../../../admin/client/App/elemental';
 import { setTimeout } from 'timers';
 
+const debug = require('debug')('keystone:fields/types/LocationAutocomplete'); // eslint-disable-line
 
 const formatAddress = (result) => {
 	const location = {};
@@ -55,15 +56,13 @@ const formatAddress = (result) => {
 	}
 
 	return {};
-}
-
+};
 
 /**
  * TODO:
  * - Remove dependency on underscore
  * - Custom path support
  */
-
 module.exports = Field.create({
 
 	displayName: 'LocationField',
@@ -206,6 +205,7 @@ module.exports = Field.create({
 			const value = formatAddress(placeResult);
 			self.place = value;
 			self.setState({ collapsed: false }, () => {
+				debug({ path, placeId, placeResult, placesServiceStatus, value });
 				onChange({ path, value });
 			});
 		});
@@ -235,6 +235,7 @@ module.exports = Field.create({
 					label: place.description,
 				}));
 
+			debug({ options });
 			callback(null, { options });
 		});
 	},
@@ -284,20 +285,17 @@ module.exports = Field.create({
 			};
 		}
 
-		const arrowToggle = this.collapsed && defaultValue ? <span className="octicon octicon-plus"></span> : null;
+		// const arrowToggle = this.collapsed && defaultValue ? <span className="octicon octicon-plus"></span> : null;
 		return (
-			<div>
-				<Select.Async
-					arrowRenderer={null}
-					loadOptions={this.getPredictions}
-					name={this.getInputName(`${path}.formatted`)}
-					onChange={this.onPlaceChosen}
-					placeholder="Type the address ..."
-					value={defaultValue}
-					simpleValue
-				/>
-				{arrowToggle}
-			</div>
+			<Select.Async
+				arrowRenderer={null}
+				loadOptions={this.getPredictions}
+				name={this.getInputName(`${path}.formatted`)}
+				onChange={this.onPlaceChosen}
+				placeholder="Type the address ..."
+				value={defaultValue}
+				simpleValue
+			/>
 		);
 	},
 
@@ -337,7 +335,6 @@ module.exports = Field.create({
 	renderUI () {
 		const { label, path } = this.props;
 		this.firstWithErrorsFocused = false;
-		debugger;
 		if (!this.shouldRenderField()) {
 			return (
 				<div>
