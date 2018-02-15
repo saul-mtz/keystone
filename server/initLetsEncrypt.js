@@ -6,7 +6,7 @@
  * @api private
  */
 
-var letsencrypt = require('letsencrypt-express');
+var letsencrypt = null;
 
 module.exports = function (keystone, app) {
 

@@ -20,7 +20,7 @@ const addressComponents = [
 /**
  * Location FieldType Constructor
  */
-function locationAutocomplete (list, path, options) {
+function locationautocomplete (list, path, options) {
 
 	this._underscoreMethods = ['format'];
 	this._fixedSize = 'full';
@@ -49,16 +49,16 @@ function locationAutocomplete (list, path, options) {
 		}
 	}
 
-	locationAutocomplete.super_.call(this, list, path, options);
+	locationautocomplete.super_.call(this, list, path, options);
 }
 
-locationAutocomplete.properName = 'LocationAutocomplete';
-util.inherits(locationAutocomplete, FieldType);
+locationautocomplete.properName = 'LocationAutocomplete';
+util.inherits(locationautocomplete, FieldType);
 
 /**
  * Registers the field on the List's Mongoose Schema.
  */
-locationAutocomplete.prototype.addToSchema = function (schema) {
+locationautocomplete.prototype.addToSchema = function (schema) {
 	var field = this;
 	var options = this.options;
 
@@ -99,7 +99,7 @@ locationAutocomplete.prototype.addToSchema = function (schema) {
 	this.bindUnderscoreMethods();
 };
 
-locationAutocomplete.prototype.addFilterToQuery = function (filter) {
+locationautocomplete.prototype.addFilterToQuery = function (filter) {
 	var query = {};
 	var field = this;
 	var filterPathMap = [
@@ -127,7 +127,7 @@ locationAutocomplete.prototype.addFilterToQuery = function (filter) {
  *
  * Delimiter defaults to `', '`.
  */
-locationAutocomplete.prototype.format = function (item, values, delimiter) {
+locationautocomplete.prototype.format = function (item, values, delimiter) {
 	if (!values) {
 		throw new Error('check this');
 		// return item.get(this.paths.serialised);
@@ -142,7 +142,7 @@ locationAutocomplete.prototype.format = function (item, values, delimiter) {
 /**
  * Detects whether the field has been modified
  */
-locationAutocomplete.prototype.isModified = function (item) {
+locationautocomplete.prototype.isModified = function (item) {
 	return item.isModified(this.paths.number)
 	|| item.isModified(this.paths.name)
 	|| item.isModified(this.paths.street)
@@ -153,7 +153,7 @@ locationAutocomplete.prototype.isModified = function (item) {
 	|| item.isModified(this.paths.geo);
 };
 
-locationAutocomplete.prototype.getInputFromData = function (data) {
+locationautocomplete.prototype.getInputFromData = function (data) {
 	const values = {};
 	addressComponents.forEach(component => {
 		const key = this.paths[component];
@@ -175,7 +175,7 @@ locationAutocomplete.prototype.getInputFromData = function (data) {
  * Validates that input has been provided
  * TODO: Needs test coverage
  */
-locationAutocomplete.prototype.validateRequiredInput = function (item, data, callback) {
+locationautocomplete.prototype.validateRequiredInput = function (item, data, callback) {
 	let result = true;
 	const errors = [];
 	const input = this.getInputFromData(data);
@@ -203,7 +203,7 @@ locationAutocomplete.prototype.validateRequiredInput = function (item, data, cal
 /**
  * Updates the value for this field in the item from a data object
  */
-locationAutocomplete.prototype.updateItem = function (item, data, callback) {
+locationautocomplete.prototype.updateItem = function (item, data, callback) {
 	const values = this.getInputFromData(data);
 
 	// rely (too much) on the formatted address,
@@ -222,4 +222,4 @@ locationAutocomplete.prototype.updateItem = function (item, data, callback) {
 };
 
 /* Export Field Type */
-module.exports = locationAutocomplete;
+module.exports = locationautocomplete;

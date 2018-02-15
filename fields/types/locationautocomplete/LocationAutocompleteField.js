@@ -222,7 +222,7 @@ module.exports = Field.create({
 			types: ['address'],
 		};
 
-		this.googleAutocompleteService.getPlacePredictions(autocompletionRequest, function(predictions, status) {
+		this.googleAutocompleteService.getPlacePredictions(autocompletionRequest, function (predictions, status) {
 			if (status !== google.maps.places.PlacesServiceStatus.OK) {
 				console.error({ predictions, status });
 				return callback(null, { options: [] });
@@ -271,7 +271,7 @@ module.exports = Field.create({
 		);
 	},
 
-	renderAutocompleteInput() {
+	renderAutocompleteInput () {
 		if (this.state.inputMode === 'manual') {
 			return null;
 		}
@@ -281,7 +281,7 @@ module.exports = Field.create({
 		if (value && value.formatted) {
 			defaultValue = {
 				label: <a href={`https://www.google.com/maps/place/?q=place_id:${value.place_id}`} target="_blank">{value.formatted}</a>,
-				value: value.formatted
+				value: value.formatted,
 			};
 		}
 
