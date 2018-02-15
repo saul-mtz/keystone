@@ -1,62 +1,16 @@
-/* global google */
 import _ from 'lodash';
 import React from 'react';
 import Field from '../Field';
-import NestedFormField from '../../components/NestedFormField';
 import CollapsedFieldLabel from '../../components/CollapsedFieldLabel';
-import theme from '../../../admin/client/theme';
-import Select from 'react-select';
+import NestedFormField from '../../components/NestedFormField';
 
 import {
 	FormField,
 	FormInput,
 	FormNote,
+	Grid,
+	LabelledControl,
 } from '../../../admin/client/App/elemental';
-import { setTimeout } from 'timers';
-
-
-const formatAddress = (result) => {
-	const location = {};
-
-	_.forEach(result.address_components, function (val) {
-		if (_.indexOf(val.types, 'street_number') >= 0) {
-			location.street_number = val.long_name;
-		}
-		if (_.indexOf(val.types, 'route') >= 0) {
-			location.street_name = val.long_name;
-		}
-		// in some cases, you get sublocality, city as locality - so only use the first
-		if (_.indexOf(val.types, 'sublocality') >= 0 && !location.sublocality) {
-			location.sublocality = val.long_name;
-		}
-		// TODO: find a way to get the "Delegación" value for CDMX
-		if (_.indexOf(val.types, 'locality') >= 0 && val.long_name !== 'Ciudad de México') {
-			location.locality = val.long_name;
-		}
-		if (_.indexOf(val.types, 'administrative_area_level_1') >= 0) {
-			location.state = val.long_name;
-		}
-		if (_.indexOf(val.types, 'country') >= 0) {
-			location.country = val.long_name;
-		}
-		if (_.indexOf(val.types, 'postal_code') >= 0) {
-			location.postal_code = val.long_name;
-		}
-	});
-
-	// https://stackoverflow.com/a/15714477/2938519
-	// lng,lat
-	location.geo = `${result.geometry.location.lng()},${result.geometry.location.lat()}`;
-	location.place_id = result.place_id;
-	location.formatted = result.formatted_address;
-
-	if (location.street_name) {
-		return location;
-	}
-
-	return {};
-}
-
 
 /**
  * TODO:
@@ -67,30 +21,37 @@ const formatAddress = (result) => {
 module.exports = Field.create({
 
 	displayName: 'LocationField',
-	statics: { type: 'Location' },
+	statics: {
+		type: 'Location',
+	},
 
 	getInitialState () {
 		return {
-			collapsed: true,
-			inputMode: 'autocomplete', // autocomplete | manual
+			collapsedFields: {},
+			improve: false,
+			overwrite: false,
 		};
 	},
 
-	initGoogle () {
-		// init the Google Autocomplete service
-		// https://developers.google.com/maps/documentation/javascript/places-autocomplete#place_autocomplete_service
-		this.googleAutocompleteService = new google.maps.places.AutocompleteService() || null;
-		this.googlePlacesService = new google.maps.places.PlacesService(document.getElementById('carengo-map')) || null;
+	componentWillMount () {
+		const { value = [] } = this.props;
+		var collapsedFields = {};
+		_.forEach(['number', 'name', 'street2', 'geo'], (i) => {
+			if (!value[i]) {
+				collapsedFields[i] = true;
+			}
+		}, this);
+		this.setState({ collapsedFields });
 	},
 
-	componentDidMount () {
-		if (!window.google) {
-			setTimeout(() => {
-				this.initGoogle();
-			}, 2000);
-		} else {
-			this.initGoogle();
-		}
+	shouldCollapse () {
+		return this.props.collapse && !this.formatValue();
+	},
+
+	uncollapseFields () {
+		this.setState({
+			collapsedFields: {},
+		});
 	},
 
 	fieldChanged (fieldPath, event) {
@@ -108,19 +69,36 @@ module.exports = Field.create({
 		return this.fieldChanged.bind(this, fieldPath);
 	},
 
+	geoChanged (i, event) {
+		const { value = {}, path, onChange } = this.props;
+		const newVal = event.target.value;
+		const geo = [
+			i === 0 ? newVal : value.geo ? value.geo[0] : '',
+			i === 1 ? newVal : value.geo ? value.geo[1] : '',
+		];
+		onChange({
+			path,
+			value: {
+				...value,
+				geo,
+			},
+		});
+	},
+
+	makeGeoChanger (fieldPath) {
+		return this.geoChanged.bind(this, fieldPath);
+	},
+
 	formatValue () {
 		const { value = {} } = this.props;
-		if (value.formatted) {
-			return value.formatted;
-		}
-
 		return _.compact([
-			value.street_name,
-			value.street_number,
-			value.sublocality,
-			value.locality,
+			value.number,
+			value.name,
+			value.street1,
+			value.street2,
+			value.suburb,
 			value.state,
-			value.postal_code,
+			value.postcode,
 			value.country,
 		]).join(', ');
 	},
@@ -129,35 +107,141 @@ module.exports = Field.create({
 		return <FormInput noedit>{this.formatValue() || ''}</FormInput>;
 	},
 
-	isFieldDisabled ({ fieldPath, value }) {
-		if (['country', 'place_id', 'geo'].indexOf(fieldPath) !== -1) {
-			return true;
+	renderField (fieldPath, label, collapse, autoFocus) {
+		if (this.state.collapsedFields[fieldPath]) {
+			return null;
 		}
-		console.log(fieldPath, this.place[fieldPath], !!this.place[fieldPath]);
-		return !!this.place[fieldPath];
-	},
-
-	renderField (fieldPath, label) {
-		const { value: currentValue = {}, path } = this.props;
-		const value = currentValue[fieldPath] || '';
-		const name = this.getInputName(`${path}.${fieldPath}`);
-		const disabled = this.isFieldDisabled({ fieldPath, value });
-		const style = disabled ? {} : { borderColor: theme.color.danger };
-		const autoFocus = false;
-
+		const { value = {}, path } = this.props;
 		return (
 			<NestedFormField label={label} data-field-location-path={path + '.' + fieldPath}>
 				<FormInput
 					autoFocus={autoFocus}
-					readOnly={disabled}
-					disabled={disabled}
-					name={name}
+					name={this.getInputName(path + '.' + fieldPath)}
 					onChange={this.makeChanger(fieldPath)}
 					placeholder={label}
-					value={value}
-					style={style}
+					value={value[fieldPath] || ''}
 				/>
 			</NestedFormField>
+		);
+	},
+
+	renderSuburbState () {
+		const { value = {}, path } = this.props;
+		return (
+			<NestedFormField label="Suburb / State" data-field-location-path={path + '.suburb_state'}>
+				<Grid.Row gutter={10}>
+					<Grid.Col small="two-thirds" data-field-location-path={path + '.suburb'}>
+						<FormInput
+							name={this.getInputName(path + '.suburb')}
+							onChange={this.makeChanger('suburb')}
+							placeholder="Suburb"
+							value={value.suburb || ''}
+						/>
+					</Grid.Col>
+					<Grid.Col small="one-third" data-field-location-path={path + '.state'}>
+						<FormInput
+							name={this.getInputName(path + '.state')}
+							onChange={this.makeChanger('state')}
+							placeholder="State"
+							value={value.state || ''}
+						/>
+					</Grid.Col>
+				</Grid.Row>
+			</NestedFormField>
+		);
+	},
+
+	renderPostcodeCountry () {
+		const { value = {}, path } = this.props;
+		return (
+			<NestedFormField label="Postcode / Country" data-field-location-path={path + '.postcode_country'}>
+				<Grid.Row gutter={10}>
+					<Grid.Col small="one-third" data-field-location-path={path + '.postcode'}>
+						<FormInput
+							name={this.getInputName(path + '.postcode')}
+							onChange={this.makeChanger('postcode')}
+							placeholder="Post Code"
+							value={value.postcode || ''}
+						/>
+					</Grid.Col>
+					<Grid.Col small="two-thirds" data-field-location-path={path + '.country'}>
+						<FormInput
+							name={this.getInputName(path + '.country')}
+							onChange={this.makeChanger('country')}
+							placeholder="Country"
+							value={value.country || ''}
+						/>
+					</Grid.Col>
+				</Grid.Row>
+			</NestedFormField>
+		);
+	},
+
+	renderGeo () {
+		if (this.state.collapsedFields.geo) {
+			return null;
+		}
+		const { value = {}, path, paths } = this.props;
+		const geo = value.geo || [];
+		return (
+			<NestedFormField label="Lat / Lng" data-field-location-path={path + '.geo'}>
+				<Grid.Row gutter={10}>
+					<Grid.Col small="one-half" data-field-location-path="latitude">
+						<FormInput
+							name={this.getInputName(paths.geo + '[1]')}
+							onChange={this.makeGeoChanger(1)}
+							placeholder="Latitude"
+							value={geo[1] || ''}
+						/>
+					</Grid.Col>
+					<Grid.Col small="one-half" data-field-location-path="longitude">
+						<FormInput
+							name={this.getInputName(paths.geo + '[0]')}
+							onChange={this.makeGeoChanger(0)}
+							placeholder="Longitude"
+							value={geo[0] || ''}
+						/>
+					</Grid.Col>
+				</Grid.Row>
+			</NestedFormField>
+		);
+	},
+
+	updateGoogleOption (key, e) {
+		var newState = {};
+		newState[key] = e.target.checked;
+		this.setState(newState);
+	},
+
+	makeGoogler (key) {
+		return this.updateGoogleOption.bind(this, key);
+	},
+
+
+	renderGoogleOptions () {
+		const { paths, enableMapsAPI } = this.props;
+		if (!enableMapsAPI) return null;
+		var replace = this.state.improve ? (
+			<LabelledControl
+				checked={this.state.overwrite}
+				label="Replace existing data"
+				name={this.getInputName(paths.overwrite)}
+				onChange={this.makeGoogler('overwrite')}
+				type="checkbox"
+			/>
+		) : null;
+		return (
+			<FormField offsetAbsentLabel>
+				<LabelledControl
+					checked={this.state.improve}
+					label="Autodetect and improve location on save"
+					name={this.getInputName(paths.improve)}
+					onChange={this.makeGoogler('improve')}
+					title="When checked, this will attempt to fill missing fields. It will also get the lat/long"
+					type="checkbox"
+				/>
+				{replace}
+			</FormField>
 		);
 	},
 
@@ -166,211 +250,42 @@ module.exports = Field.create({
 		if (!note) return null;
 		return (
 			<FormField offsetAbsentLabel>
-				<FormNote html={note} />
+				<FormNote note={note} />
 			</FormField>
 		);
 	},
 
-	toggleCollapsed () {
-		const collapsed = !this.state.collapsed;
-		this.setState({ collapsed });
-	},
-
-	toggleInputMode () {
-		const { inputMode } = this.state;
-		let updatedState;
-		if (inputMode === 'autocomplete') {
-			updatedState = {
-				inputMode: 'manual',
-				collapsed: false,
-			};
-		} else {
-			updatedState = {
-				inputMode: 'autocomplete',
-				collapsed: true,
-			};
-		}
-		this.setState(updatedState);
-	},
-
-	onPlaceChosen (placeId) {
-		const { path, onChange } = this.props;
-
-		// the user clear the filed
-		if (!placeId) {
-			return this.setState({ collapsed: true }, () => onChange({ path }));
-		}
-
-		const self = this;
-		// https://developers.google.com/maps/documentation/javascript/reference#PlaceResult
-		this.googlePlacesService.getDetails({ placeId }, function (placeResult, placesServiceStatus) {
-			const value = formatAddress(placeResult);
-			self.place = value;
-			self.setState({ collapsed: false }, () => {
-				onChange({ path, value });
-			});
-		});
-	},
-
-	getPredictions (input, callback) {
-		if (!input || typeof input !== 'string' || input.length < 3) {
-			return callback(null, { options: [] });
-		}
-
-		const autocompletionRequest = {
-			input,
-			componentRestrictions: { country: 'MX' },
-			types: ['address'],
-		};
-
-		this.googleAutocompleteService.getPlacePredictions(autocompletionRequest, function(predictions, status) {
-			if (status !== google.maps.places.PlacesServiceStatus.OK) {
-				console.error({ predictions, status });
-				return callback(null, { options: [] });
-			}
-
-			const options = predictions
-				.filter(place => place.types && (place.types.indexOf('street_address') !== -1 || place.types.indexOf('route') !== -1))
-				.map(place => ({
-					value: place.place_id,
-					label: place.description,
-				}));
-
-			callback(null, { options });
-		});
-	},
-
-	renderAddressFields () {
-		const { inputMode, collapsed } = this.state;
-		const autocomplete = inputMode === 'autocomplete';
-
-		if (autocomplete && collapsed) {
-			return null;
-		}
-
-		const style = {
-			border: 'solid 1px #ccc',
-			borderRadius: '0.3rem',
-			padding: '0.4rem 0.6rem',
-			marginTop: autocomplete ? '1em' : 'auto',
-			width: '100%',
-		};
-		// renderField(fieldPath, label, disabled, focus) {
-		return (
-			<div style={style}>
-				{this.renderField('street_name', 'Street Name')}
-				{this.renderField('street_number', 'Street Number')}
-				{this.renderField('sublocality', 'Sublocality (Colonia)')}
-				{this.renderField('locality', 'Locality (Delegación/Municipio)')}
-				{this.renderField('state', 'State')}
-				{this.renderField('postal_code', 'Postcode')}
-				{this.renderField('country', 'Country')}
-				{this.renderField('place_id', 'Place Id')}
-				{this.renderField('geo', 'Coordinates')}
-			</div>
-		);
-	},
-
-	renderAutocompleteInput() {
-		if (this.state.inputMode === 'manual') {
-			return null;
-		}
-
-		const { path, value } = this.props;
-		let defaultValue = null;
-		if (value && value.formatted) {
-			defaultValue = {
-				label: <a href={`https://www.google.com/maps/place/?q=place_id:${value.place_id}`} target="_blank">{value.formatted}</a>,
-				value: value.formatted
-			};
-		}
-
-		/*
-		return (
-			<Grid.Row gutter={10}>
-				<Grid.Col small="four-fifths">
-					<Select.Async
-						arrowRenderer={null}
-						loadOptions={this.getPredictions}
-						name={this.getInputName(`${path}.formatted`)}
-						onChange={this.onPlaceChosen}
-						value={defaultValue}
-						simpleValue
-					/>
-				</Grid.Col>
-				<Grid.Col small="one-fifth">
-					<CollapsedFieldLabel onClick={this.toggleInputMode}>
-						Enter Manually
-					</CollapsedFieldLabel>
-				</Grid.Col>
-			</Grid.Row>
-		)
-		*/
-
-		return (
-			<Select.Async
-				arrowRenderer={null}
-				loadOptions={this.getPredictions}
-				name={this.getInputName(`${path}.formatted`)}
-				onChange={this.onPlaceChosen}
-				placeholder="Type the address ..."
-				value={defaultValue}
-				simpleValue
-			/>
-		);
-	},
-
-	renderLinks () {
-		const { inputMode, collapsed } = this.state;
-		let switchTo = null;
-
-		if (inputMode === 'manual') {
-			switchTo = (
-				<span style={{ marginLeft: '1em' }}>
-					<CollapsedFieldLabel onClick={this.toggleInputMode}>
-						Use Autocomplete
-					</CollapsedFieldLabel>
-				</span>
-			);
-		}
-
-		let showAll = null;
-		if (collapsed) {
-			return (
-				<span style={{ marginLeft: '1em' }}>
-					<CollapsedFieldLabel onClick={this.toggleCollapsed}>
-						Show All Fields
-					</CollapsedFieldLabel>
-				</span>
-			);
-		}
-
-		return (
-			<div style={{ display: 'inline-block' }}>
-				{switchTo}
-				{showAll}
-			</div>
-		);
-	},
-
 	renderUI () {
-		const { label, path } = this.props;
-		this.firstWithErrorsFocused = false;
+
 		if (!this.shouldRenderField()) {
 			return (
 				<FormField label={this.props.label}>{this.renderValue()}</FormField>
 			);
 		}
 
+		/* eslint-disable no-script-url */
+		var showMore = !_.isEmpty(this.state.collapsedFields)
+			? <CollapsedFieldLabel onClick={this.uncollapseFields}>(show more fields)</CollapsedFieldLabel>
+			: null;
+		/* eslint-enable */
+
+		const { label, path } = this.props;
 		return (
 			<div data-field-name={path} data-field-type="location">
-				<div id="carengo-map"/>
 				<FormField label={label} htmlFor={path}>
-					{this.renderAutocompleteInput()}
-					{this.renderAddressFields()}
+					{showMore}
 				</FormField>
+				{this.renderField('number', 'PO Box / Shop', true, true)}
+				{this.renderField('name', 'Building Name', true)}
+				{this.renderField('street1', 'Street Address')}
+				{this.renderField('street2', 'Street Address 2', true)}
+				{this.renderSuburbState()}
+				{this.renderPostcodeCountry()}
+				{this.renderGeo()}
+				{this.renderGoogleOptions()}
 				{this.renderNote()}
 			</div>
 		);
 	},
+
 });

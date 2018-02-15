@@ -14,7 +14,8 @@ module.exports = {
 			improve: 'location.improve',
 			name: 'location.name',
 			overwrite: 'location.overwrite',
-			postal_code: 'location.postal_code',
+			postcode: 'location.postcode',
+			serialised: 'location.serialised',
 			state: 'location.state',
 			street1: 'location.street1',
 			street2: 'location.street2',
@@ -22,7 +23,7 @@ module.exports = {
 		},
 		value: {
 			country: null,
-			postal_code: null,
+			postcode: null,
 			state: null,
 			street1: null,
 			suburb: null,
