@@ -72,7 +72,7 @@ carengomoney.prototype.updateItem = function (item, data, callback) {
 carengomoney.prototype.getNumber = function (value) {
 	const number = utils.number(value);
 	return Number.isNaN(number) ? number : number * 100;
-}
+};
 
 carengomoney.prototype.getRangeErrorMessage = function (minCents, maxCents) {
 	const { forceInteger } = this.options;

@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-	Alert,
 	Form,
 	FormField,
 	FormNote,
@@ -28,6 +27,7 @@ const styleInputGroup = {
 	marginBottom: 0,
 };
 
+/*
 const { currency, locale } = Keystone;
 
 const ErrorMessage = ({ msg }) => (
@@ -35,6 +35,7 @@ const ErrorMessage = ({ msg }) => (
 		<Alert color="danger">{msg}</Alert>
 	</Modal.Body>
 );
+*/
 
 class PriceForm extends React.Component {
 
@@ -219,15 +220,14 @@ class ModalContainer extends React.Component {
 		const fieldName = name.match(/^price\[(.+)\]$/)[1];
 		const parsedValue = fieldName === 'extraKm' ? parseInt(value, 10) : parseFloat(value);
 
-		debugger;
 		const { data } = this.state;
 		data[fieldName] = parsedValue;
 		const isValid = false;
 		this.setState({ data, isValid });
 	}
 
-	onUpdatePrice () {
-		debugger;
+	onUpdatePrice (a, b, c) {
+		debug({ a, b, c });
 	}
 
 	render () {
