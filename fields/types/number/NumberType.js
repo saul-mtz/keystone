@@ -35,12 +35,11 @@ number.prototype.validateInput = function (data, callback) {
 
 			// validate the ranges
 			if (result) {
-				const min = undefined !== this.options.min ? this.options.min  : Number.MIN_VALUE;
+				const min = undefined !== this.options.min ? this.options.min : Number.MIN_VALUE;
 				const max = undefined !== this.options.max ? this.options.max : Number.MAX_VALUE;
 
 				result = value >= min && value <= max;
 				if (!result) {
-					const copy = value;
 					errorMessage = this.getRangeErrorMessage(min, max);
 				}
 			}
@@ -50,8 +49,8 @@ number.prototype.validateInput = function (data, callback) {
 };
 
 number.prototype.getNumber = function (value) {
-	return utils.number(value);;
-}
+	return utils.number(value);
+};
 
 number.prototype.getRangeErrorMessage = function (min, max) {
 	return `"${this.path}" must be greater than ${min} and less than ${max}.`;

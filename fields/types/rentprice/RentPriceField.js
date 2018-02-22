@@ -16,7 +16,7 @@ module.exports = Field.create({
 	displayName: 'RentPriceField',
 
 	updatePrice (props) {
-		debugger;
+		debug(props);
 	},
 
 	onCancel () {
