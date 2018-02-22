@@ -1,0 +1,98 @@
+'use strict';
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _reactDom = require('react-dom');
+
+var _elemental = require('../../../admin/client/App/elemental');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+const INVERTED_OPTIONS = [{ label: 'Matches', value: false }, { label: 'Does NOT Match', value: true }];
+
+const MODE_OPTIONS = [{ label: 'Contains', value: 'contains' }, { label: 'Exactly', value: 'exactly' }, { label: 'Begins with', value: 'beginsWith' }, { label: 'Ends with', value: 'endsWith' }];
+
+function getDefaultValue() {
+	return {
+		mode: MODE_OPTIONS[0].value,
+		inverted: INVERTED_OPTIONS[0].value,
+		value: ''
+	};
+}
+
+var TextFilter = _react2.default.createClass({
+	displayName: 'TextFilter',
+
+	propTypes: {
+		filter: _react2.default.PropTypes.shape({
+			mode: _react2.default.PropTypes.oneOf(MODE_OPTIONS.map(i => i.value)),
+			inverted: _react2.default.PropTypes.boolean,
+			value: _react2.default.PropTypes.string
+		})
+	},
+	statics: {
+		getDefaultValue: getDefaultValue
+	},
+	getDefaultProps() {
+		return {
+			filter: getDefaultValue()
+		};
+	},
+	updateFilter(value) {
+		this.props.onChange(_extends({}, this.props.filter, value));
+	},
+	selectMode(e) {
+		const mode = e.target.value;
+		this.updateFilter({ mode });
+		(0, _reactDom.findDOMNode)(this.refs.focusTarget).focus();
+	},
+	toggleInverted(inverted) {
+		this.updateFilter({ inverted });
+		(0, _reactDom.findDOMNode)(this.refs.focusTarget).focus();
+	},
+	updateValue(e) {
+		this.updateFilter({ value: e.target.value });
+	},
+	render() {
+		const { field, filter } = this.props;
+		const mode = MODE_OPTIONS.filter(i => i.value === filter.mode)[0];
+		const placeholder = field.label + ' ' + mode.label.toLowerCase() + '...';
+
+		return _react2.default.createElement(
+			'div',
+			null,
+			_react2.default.createElement(
+				_elemental.FormField,
+				null,
+				_react2.default.createElement(_elemental.SegmentedControl, {
+					equalWidthSegments: true,
+					onChange: this.toggleInverted,
+					options: INVERTED_OPTIONS,
+					value: filter.inverted
+				})
+			),
+			_react2.default.createElement(
+				_elemental.FormField,
+				null,
+				_react2.default.createElement(_elemental.FormSelect, {
+					onChange: this.selectMode,
+					options: MODE_OPTIONS,
+					value: mode.value
+				})
+			),
+			_react2.default.createElement(_elemental.FormInput, {
+				autoFocus: true,
+				onChange: this.updateValue,
+				placeholder: placeholder,
+				ref: 'focusTarget',
+				value: this.props.filter.value
+			})
+		);
+	}
+});
+
+module.exports = TextFilter;
