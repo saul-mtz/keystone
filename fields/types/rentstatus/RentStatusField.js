@@ -1,6 +1,5 @@
 import Field from '../Field';
 import React from 'react';
-import Select from 'react-select';
 import {
 	Button,
 	Form,
@@ -16,6 +15,8 @@ import FileChangeMessage from '../../components/FileChangeMessage';
 
 import StateMachine from 'fsm-as-promised';
 
+const debug = require('debug')('keystone:fields/types/RentStatusField'); // eslint-disable-line
+
 class DetailsForm extends React.Component {
 
 	constructor () {
@@ -24,12 +25,12 @@ class DetailsForm extends React.Component {
 		this.onChange = this.onChange.bind(this);
 	}
 
-	onChange(e) {
+	onChange (e) {
 		const value = e.target.value;
 		this.setState({ value });
 	}
 
-	render() {
+	render () {
 		const { onCancel, updateStatus, event } = this.props;
 		const { value } = this.state;
 		const isValid = value && typeof value === 'string' && value.length > 4;
@@ -54,7 +55,7 @@ class DetailsForm extends React.Component {
 					<Button
 						color="success"
 						disabled={!isValid}
-						onClick={() => { updateStatus({ details: value, event }) }}>
+						onClick={() => { updateStatus({ details: value, event }); }}>
 						Update Status
 					</Button>
 					<Button
@@ -75,7 +76,7 @@ module.exports = Field.create({
 
 	displayName: 'RentStatusField',
 
-	componentWillMount() {
+	componentWillMount () {
 		this.init();
 	},
 
@@ -103,9 +104,9 @@ module.exports = Field.create({
 		if (fsm.can(event.name) && event.to !== this.currentStatus) {
 			this.nextEvent = event;
 			this.setState({ showStatusMessageForm: false, details, event }, () => {
-				const { path, onChange} = this.props;
-				console.log(`Event '${event.name}' to move from '${event.from}' to '${event.to}'`);
-				onChange({ path, value: event.to })
+				const { path, onChange } = this.props;
+				debug(`Event '${event.name}' to move from '${event.from}' to '${event.to}'`);
+				onChange({ path, value: event.to });
 			});
 		} else {
 			console.error('Invalid event', event);
@@ -117,8 +118,7 @@ module.exports = Field.create({
 		this.setState({ showStatusMessageForm: false, details: undefined });
 	},
 
-	detailsForm() {
-		const { path, value } = this.props;
+	detailsForm () {
 		const { event, showStatusMessageForm } = this.state;
 
 		if (!showStatusMessageForm) {
@@ -135,9 +135,8 @@ module.exports = Field.create({
 	},
 
 	renderField () {
-		const { edited, path, reset, stateMachine, value} = this.props;
+		const { edited, reset, stateMachine, value } = this.props;
 		let changed = false;
-		let statusInput;
 		let updatedMessage;
 
 		// handle reset
@@ -150,7 +149,7 @@ module.exports = Field.create({
 			this.init();
 		}
 
-		const { currentStatus, fsm, nextEvent } = this;
+		const { currentStatus, fsm } = this;
 
 		const inputProps = {
 			name: this.getInputName(this.props.path),
@@ -177,7 +176,7 @@ module.exports = Field.create({
 		// danger: final
 		// warning: initial, conflict
 		// info: intermediate
-		const color = 'created' === value ? 'warning' : (fsm.isFinal(value) ? 'danger' : 'info');
+		const color = value === 'created' ? 'warning' : (fsm.isFinal(value) ? 'danger' : 'info');
 		const events = stateMachine.config.events.filter(({ from, name }) => {
 			// check the current state is in the "from" definition
 			// check that the transition is not an automatic transition (starts with auto_*)
@@ -196,7 +195,7 @@ module.exports = Field.create({
 				{
 					events.map(event => (
 						<Section key={`section-${event.name}`} grow>
-							<Button disabled={changed} onClick={() => self.statusChangeRequest(event) }>
+							<Button disabled={changed} onClick={() => self.statusChangeRequest(event)} >
 								{event.name}
 							</Button>
 						</Section>

@@ -51,12 +51,6 @@ var Keystone = function () {
 	this.set('host', process.env.HOST || process.env.IP || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0');
 	this.set('listen', process.env.LISTEN);
 
-	this.set('ssl', process.env.SSL);
-	this.set('ssl port', process.env.SSL_PORT || '3001');
-	this.set('ssl host', process.env.SSL_HOST || process.env.SSL_IP);
-	this.set('ssl key', process.env.SSL_KEY);
-	this.set('ssl cert', process.env.SSL_CERT);
-
 	this.set('cookie secret', process.env.COOKIE_SECRET);
 	this.set('cookie signin', (this.get('env') === 'development') ? true : false);
 
@@ -73,10 +67,6 @@ var Keystone = function () {
 
 	if (process.env.S3_BUCKET && process.env.S3_KEY && process.env.S3_SECRET) {
 		this.set('s3 config', { bucket: process.env.S3_BUCKET, key: process.env.S3_KEY, secret: process.env.S3_SECRET, region: process.env.S3_REGION });
-	}
-
-	if (process.env.AZURE_STORAGE_ACCOUNT && process.env.AZURE_STORAGE_ACCESS_KEY) {
-		this.set('azurefile config', { account: process.env.AZURE_STORAGE_ACCOUNT, key: process.env.AZURE_STORAGE_ACCESS_KEY });
 	}
 
 	if (process.env.CLOUDINARY_URL) {

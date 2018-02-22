@@ -12,6 +12,7 @@
 *.iws
 .idea/
 *.sublime-*
+.vscode 
 
 logs
 node_modules/

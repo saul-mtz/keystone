@@ -24,7 +24,6 @@ function locationautocomplete (list, path, options) {
 
 	this._underscoreMethods = ['format'];
 	this._fixedSize = 'full';
-
 	if (!keystone.get('google server api key')) {
 		throw new Error('"google server api key" value is not set');
 	}
