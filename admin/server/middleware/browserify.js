@@ -23,7 +23,10 @@ function logRebuild (file) {
 }
 
 function logError (file, err) {
-	console.log(ts() + chalk.red('error building ' + chalk.underline(file) + ':') + '\n' + err.message);
+	console.error(file);
+	console.error(err);
+	console.error(ts() + chalk.red('error building ' + chalk.underline(file) + ':') + '\n' + err.message);
+	process.exit(1);
 }
 
 module.exports = function (opts) {

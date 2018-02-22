@@ -1,9 +1,11 @@
-import { css } from 'glamor';
+import { StyleSheet, css } from 'aphrodite/no-important';
 import React, { PropTypes } from 'react';
-import classes from './styles';
+import styles from './styles';
+
+const classes = StyleSheet.create(styles);
 
 function FormLabel ({
-	cssStyles,
+	aphroditeStyles,
 	className,
 	component: Component,
 	cropText,
@@ -20,7 +22,7 @@ function FormLabel ({
 		classes.FormLabel,
 		formLayout ? classes['FormLabel--form-layout-' + formLayout] : null,
 		cropText ? classes['FormLabel--crop-text'] : null,
-		cssStyles
+		aphroditeStyles
 	);
 	if (className) {
 		props.className += (' ' + className);
@@ -41,15 +43,15 @@ const stylesShape = {
 };
 
 FormLabel.propTypes = {
+	aphroditeStyles: PropTypes.oneOfType([
+		PropTypes.arrayOf(PropTypes.shape(stylesShape)),
+		PropTypes.shape(stylesShape),
+	]),
 	component: PropTypes.oneOfType([
 		PropTypes.string,
 		PropTypes.func,
 	]),
 	cropText: PropTypes.bool,
-	cssStyles: PropTypes.oneOfType([
-		PropTypes.arrayOf(PropTypes.shape(stylesShape)),
-		PropTypes.shape(stylesShape),
-	]),
 };
 FormLabel.defaultProps = {
 	component: 'label',

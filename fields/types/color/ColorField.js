@@ -1,5 +1,5 @@
 import { SketchPicker } from 'react-color';
-import { css } from 'glamor';
+import { css, StyleSheet } from 'aphrodite/no-important';
 import Field from '../Field';
 import React from 'react';
 import {
@@ -86,7 +86,7 @@ const ColorField = Field.create({
 						/>
 					</Section>
 					<Section>
-						<Button onClick={this.handleClick} cssStyles={classes.button} data-e2e-type-color__button>
+						<Button onClick={this.handleClick} aphroditeStyles={classes.button} data-e2e-type-color__button>
 							{this.renderSwatch()}
 						</Button>
 					</Section>
@@ -113,7 +113,7 @@ const ColorField = Field.create({
 });
 
 /* eslint quote-props: ["error", "as-needed"] */
-const classes = {
+const classes = StyleSheet.create({
 	button: {
 		background: 'white',
 		padding: 4,
@@ -144,6 +144,6 @@ const classes = {
 		height: '100%',
 		width: '100%',
 	},
-};
+});
 
 module.exports = ColorField;

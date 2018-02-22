@@ -5,16 +5,28 @@ module.exports = function bindStylusMiddleware (keystone, app) {
 	var stylusOptions = keystone.get('stylus options') || {};
 	var debug = require('debug')('keystone:core:bindStylusMiddleware');
 	var _ = require('lodash');
-	var safeRequire = require('../lib/safeRequire');
 
 	if (typeof stylusPaths === 'string') {
 		stylusPaths = [stylusPaths];
 	}
 
 	if (Array.isArray(stylusPaths)) {
-		debug('adding stylus');
-		var stylusMiddleware = safeRequire('stylus', 'stylus').middleware;
-
+		var stylusMiddleware;
+		try {
+			debug('adding stylus');
+			stylusMiddleware = require('stylus').middleware;
+		} catch (e) {
+			if (e.code === 'MODULE_NOT_FOUND') {
+				console.error(
+					'\nERROR: stylus not found.\n'
+					+ '\nPlease install stylus from npm to use the `stylus` option.'
+					+ '\nYou can do this by running "npm install stylus --save".\n'
+				);
+				process.exit(1);
+			} else {
+				throw e;
+			}
+		}
 		stylusPaths.forEach(function (path) {
 			app.use(stylusMiddleware(_.extend({
 				src: keystone.expandPath(path),

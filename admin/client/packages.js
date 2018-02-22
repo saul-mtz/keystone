@@ -7,13 +7,14 @@ admin/server/middleware/browserify.js
 */
 
 module.exports = [
-	'glamor',
+	'aphrodite/no-important',
 	'async',
 	'blacklist',
 	'classnames',
 	'display-name',
 	'elemental',
 	'expression-match',
+	'fsm-as-promised',
 	'i',
 	'list-to-array',
 	'lodash',

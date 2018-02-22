@@ -30,8 +30,10 @@ module.exports = function IndexRoute (req, res) {
 		backUrl: backUrl,
 		brand: keystone.get('brand'),
 		csrf: { header: {} },
+		currency: keystone.get('currency'),
 		devMode: !!process.env.KEYSTONE_DEV,
 		lists: lists,
+		locale: keystone.get('locale'),
 		nav: keystone.nav,
 		orphanedLists: orphanedLists,
 		signoutUrl: keystone.get('signout url'),
@@ -87,7 +89,9 @@ module.exports = function IndexRoute (req, res) {
 		locals.cloudinaryScript = cloudinary.cloudinary_js_config();
 	};
 
-	ejs.renderFile(templatePath, locals, { delimiter: '%' }, function (err, str) {
+	locals.google_api_key = keystone.get('google api key');
+
+	ejs.renderFile(templatePath, locals, {}, function (err, str) {
 		if (err) {
 			console.error('Could not render Admin UI Index Template:', err);
 			return res.status(500).send(keystone.wrapHTMLError('Error Rendering Admin UI', err.message));
