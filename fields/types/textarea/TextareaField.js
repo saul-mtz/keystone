@@ -26,6 +26,7 @@ module.exports = Field.create({
 			height: height,
 			...style,
 		};
+
 		return (
 			<FormInput
 				autoComplete="off"

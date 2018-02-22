@@ -1,8 +1,10 @@
 import React, { Component, PropTypes } from 'react';
-import { css } from 'glamor';
-import classes from './styles';
+import { css, StyleSheet } from 'aphrodite/no-important';
+import styles from './styles';
 import concatClassnames from '../../../utils/concatClassnames';
 import InputNoedit from './noedit';
+
+const classes = StyleSheet.create(styles);
 
 // NOTE must NOT be functional component to allow `refs`
 
@@ -15,7 +17,7 @@ class FormInput extends Component {
 	}
 	render () {
 		const {
-			cssStyles,
+			aphroditeStyles,
 			className,
 			disabled,
 			id,
@@ -36,7 +38,7 @@ class FormInput extends Component {
 			classes['FormInput__size--' + size],
 			disabled ? classes['FormInput--disabled'] : null,
 			formLayout ? classes['FormInput--form-layout-' + formLayout] : null,
-			...concatClassnames(cssStyles)
+			...concatClassnames(aphroditeStyles)
 		);
 		if (className) {
 			props.className += (' ' + className);
@@ -61,7 +63,7 @@ const stylesShape = {
 };
 
 FormInput.propTypes = {
-	cssStyles: PropTypes.oneOfType([
+	aphroditeStyles: PropTypes.oneOfType([
 		PropTypes.arrayOf(PropTypes.shape(stylesShape)),
 		PropTypes.shape(stylesShape),
 	]),

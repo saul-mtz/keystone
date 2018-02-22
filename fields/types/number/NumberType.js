@@ -3,7 +3,6 @@ var numeral = require('numeral');
 var util = require('util');
 var utils = require('keystone-utils');
 
-
 /**
  * Number FieldType Constructor
  * @extends Field
@@ -23,17 +22,38 @@ number.properName = 'Number';
 util.inherits(number, FieldType);
 
 number.prototype.validateInput = function (data, callback) {
-	var value = this.getValueFromData(data);
-	var result = value === undefined || typeof value === 'number' || value === null;
+	let value = this.getValueFromData(data);
+	let result = value === undefined || typeof value === 'number' || value === null;
+	let errorMessage;
+
 	if (typeof value === 'string') {
 		if (value === '') {
 			result = true;
 		} else {
-			value = utils.number(value);
+			value = this.getNumber(value);
 			result = !isNaN(value);
+
+			// validate the ranges
+			if (result) {
+				const min = undefined !== this.options.min ? this.options.min : Number.MIN_VALUE;
+				const max = undefined !== this.options.max ? this.options.max : Number.MAX_VALUE;
+
+				result = value >= min && value <= max;
+				if (!result) {
+					errorMessage = this.getRangeErrorMessage(min, max);
+				}
+			}
 		}
 	}
-	utils.defer(callback, result);
+	utils.defer(callback, result, errorMessage);
+};
+
+number.prototype.getNumber = function (value) {
+	return utils.number(value);
+};
+
+number.prototype.getRangeErrorMessage = function (min, max) {
+	return `"${this.path}" must be greater than ${min} and less than ${max}.`;
 };
 
 number.prototype.validateRequiredInput = function (item, data, callback) {

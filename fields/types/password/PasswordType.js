@@ -47,7 +47,7 @@ function password (list, path, options) {
 			}
 		}
 	}
-	if (this.options.max && this.options.max < this.options.min) {
+	if (this.options.max < this.options.min) {
 		throw new Error('FieldType.Password: options - maximum password length cannot be less than the minimum length.');
 	}
 }
@@ -87,9 +87,11 @@ password.prototype.addToSchema = function (schema) {
 		if (!this.isModified(field.path) || !this[needs_hashing]) {
 			return next();
 		}
+		// reset the [needs_hashing] flag so that new values can't be hashed more than once
+		// (inherited models double up on pre save handlers for password fields)
+		this[needs_hashing] = false;
 		if (!this.get(field.path)) {
 			this.set(field.path, undefined);
-			this[needs_hashing] = false;
 			return next();
 		}
 		var item = this;
@@ -103,9 +105,6 @@ password.prototype.addToSchema = function (schema) {
 				}
 				// override the cleartext password with the hashed one
 				item.set(field.path, hash);
-				// reset [needs_hashing] so that new values can't be hashed more than once
-				// (inherited models double up on pre save handlers for password fields)
-				item[needs_hashing] = false;
 				next();
 			});
 		});
@@ -171,7 +170,12 @@ password.prototype.validateInput = function (data, callback) {
 	var confirmValue = this.getValueFromData(data, '_confirm');
 	var passwordValue = this.getValueFromData(data);
 
-	var validation = validate(passwordValue, confirmValue, min, max, complexity, rejectCommon);
+	var validation;
+	if (!this.options.required && undefined === passwordValue) {
+		validation = { result: true };
+	} else {
+		validation = validate(passwordValue, confirmValue, min, max, complexity, rejectCommon);
+	}
 
 	utils.defer(callback, validation.result, validation.detail);
 };
@@ -201,7 +205,7 @@ var validate = password.validate = function (pass, confirm, min, max, complexity
 		}
 	}
 
-	if (pass && typeof pass === 'string' && rejectCommon && dumbPasswords.check(pass)) {
+	if (rejectCommon && dumbPasswords.check(pass)) {
 		messages.push('Password must not be a common, frequently-used password.');
 	}
 

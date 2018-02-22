@@ -9,13 +9,14 @@ import {
 	ResponsiveText,
 } from '../../../elemental';
 
+// import { css, StyleSheet } from 'aphrodite/no-important';
 import { Fields } from 'FieldTypes';
 import { fade } from '../../../../utils/color';
 import theme from '../../../../theme';
 
 import { Button, LoadingButton } from '../../../elemental';
 import AlertMessages from '../../../shared/AlertMessages';
-import ConfirmationDialog from '../../../shared/ConfirmationDialog';
+import ConfirmationDialog from './../../../shared/ConfirmationDialog';
 
 import FormHeading from './FormHeading';
 import AltText from './AltText';
@@ -103,6 +104,7 @@ var EditForm = React.createClass({
 		});
 	},
 	handleReset () {
+		this.reset = true;
 		this.setState({
 			values: assign({}, this.state.lastValues || this.props.data.fields),
 			resetDialogIsOpen: false,
@@ -141,6 +143,8 @@ var EditForm = React.createClass({
 					loading: false,
 				});
 			} else {
+				this.edited = true;
+
 				// Success, display success flash messages, replace values
 				// TODO: Update key value
 				this.setState({
@@ -224,6 +228,16 @@ var EditForm = React.createClass({
 	},
 	renderFormElements () {
 		var headings = 0;
+		let edited = false;
+		let reset = false;
+
+		if (this.edited) {
+			edited = true;
+			this.edited = false;
+		} else if (this.reset) {
+			reset = true;
+			this.reset = false;
+		}
 
 		return this.props.list.uiElements.map((el, index) => {
 			// Don't render the name field if it is the header since it'll be rendered in BIG above
@@ -251,6 +265,11 @@ var EditForm = React.createClass({
 				if (index === 0 && this.state.focusFirstField) {
 					props.autoFocus = true;
 				}
+
+				// to know if the list was edited
+				props.edited = edited;
+				props.reset = reset;
+
 				return React.createElement(Fields[field.type], props);
 			}
 		}, this);
@@ -368,6 +387,7 @@ var EditForm = React.createClass({
 			</div>
 		) : null;
 	},
+
 	render () {
 		return (
 			<form ref="editForm" className="EditForm-container">

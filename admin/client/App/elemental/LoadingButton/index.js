@@ -1,5 +1,5 @@
 import React, { PropTypes } from 'react';
-import { css } from 'glamor';
+import { css, StyleSheet } from 'aphrodite/no-important';
 import Button from '../Button';
 import Spinner from '../Spinner';
 import theme from '../../../theme';
@@ -34,7 +34,7 @@ function LoadingButton ({ children, loading, ...props }) {
 			: 0,
 	};
 
-	// render everything
+	// render all that shit
 	return (
 		<Button {...props}>
 			<span className={css(classes.spinner)} style={spinnerStyles}>
@@ -52,7 +52,7 @@ LoadingButton.defaultProps = {
 	loading: false,
 };
 
-const classes = {
+const classes = StyleSheet.create({
 	spinner: {
 		display: 'inline-block',
 		overflow: 'hidden',
@@ -60,6 +60,6 @@ const classes = {
 		transition: 'width 200ms ease-out',
 		verticalAlign: 'middle',
 	},
-};
+});
 
 module.exports = LoadingButton;

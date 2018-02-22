@@ -1,8 +1,10 @@
-import { css } from 'glamor';
+import { StyleSheet, css } from 'aphrodite/no-important';
 import React, { Component, PropTypes } from 'react';
 
-import classes from './styles';
+import styles from './styles';
 import FormLabel from '../FormLabel';
+
+const classes = StyleSheet.create(styles);
 
 class FormField extends Component {
 	constructor () {
@@ -17,7 +19,7 @@ class FormField extends Component {
 	render () {
 		const { formLayout = 'basic', labelWidth } = this.context;
 		const {
-			cssStyles,
+			aphroditeStyles,
 			children,
 			className,
 			cropLabel,
@@ -31,7 +33,7 @@ class FormField extends Component {
 			classes.FormField,
 			classes['FormField--form-layout-' + formLayout],
 			offsetAbsentLabel ? classes['FormField--offset-absent-label'] : null,
-			cssStyles
+			aphroditeStyles
 		);
 		if (className) {
 			props.className += (' ' + className);
@@ -75,12 +77,12 @@ FormField.childContextTypes = {
 	formFieldId: PropTypes.string,
 };
 FormField.propTypes = {
-	children: PropTypes.node,
-	cropLabel: PropTypes.bool,
-	cssStyles: PropTypes.oneOfType([
+	aphroditeStyles: PropTypes.oneOfType([
 		PropTypes.arrayOf(PropTypes.shape(stylesShape)),
 		PropTypes.shape(stylesShape),
 	]),
+	children: PropTypes.node,
+	cropLabel: PropTypes.bool,
 	htmlFor: React.PropTypes.string,
 	label: React.PropTypes.string,
 	offsetAbsentLabel: React.PropTypes.bool,

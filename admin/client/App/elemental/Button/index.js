@@ -1,14 +1,14 @@
-import { css } from 'glamor';
+import { css, StyleSheet } from 'aphrodite/no-important';
 import React, { Component, PropTypes } from 'react';
 import styles from './styles';
 
-const commonClasses = styles.common;
+const commonClasses = StyleSheet.create(styles.common);
 const stylesheetCache = {};
 function getStyleSheet (variant, color) {
 	const cacheKey = `${variant}-${color}`;
 	if (!stylesheetCache[cacheKey]) {
 		const variantStyles = styles[variant](color);
-		stylesheetCache[cacheKey] = variantStyles;
+		stylesheetCache[cacheKey] = StyleSheet.create(variantStyles);
 	}
 	return stylesheetCache[cacheKey];
 }
@@ -23,7 +23,7 @@ class Button extends Component {
 	render () {
 		var {
 			active,
-			cssStyles,
+			aphroditeStyles,
 			block,
 			className,
 			color,
@@ -43,7 +43,7 @@ class Button extends Component {
 			block ? commonClasses.block : null,
 			disabled ? commonClasses.disabled : null,
 			active ? variantClasses.active : null,
-			...cssStyles
+			...aphroditeStyles
 		);
 		if (className) {
 			props.className += (' ' + className);
@@ -64,23 +64,23 @@ class Button extends Component {
 
 Button.propTypes = {
 	active: PropTypes.bool,
+	aphroditeStyles: PropTypes.arrayOf(PropTypes.shape({
+		_definition: PropTypes.object,
+		_name: PropTypes.string,
+	})),
 	block: PropTypes.bool,
 	color: PropTypes.oneOf(BUTTON_COLORS),
 	component: PropTypes.oneOfType([
 		PropTypes.func,
 		PropTypes.string,
 	]),
-	cssStyles: PropTypes.arrayOf(PropTypes.shape({
-		_definition: PropTypes.object,
-		_name: PropTypes.string,
-	})),
 	disabled: PropTypes.bool,
 	href: PropTypes.string,
 	size: PropTypes.oneOf(BUTTON_SIZES),
 	variant: PropTypes.oneOf(BUTTON_VARIANTS),
 };
 Button.defaultProps = {
-	cssStyles: [],
+	aphroditeStyles: [],
 	color: 'default',
 	variant: 'fill',
 };

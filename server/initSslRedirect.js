@@ -1,25 +1,23 @@
 module.exports = function (keystone, app) {
-	var portString;
 	function sslRedirect (req, res, next) {
-		if (req.secure) {
+		const proto = req.headers['x-forwarded-proto'];
+		if (proto === 'https') {
 			next();
 		} else {
-			// Don't redirect connections from localhost
-			if (req.ip === '127.0.0.1') {
+			const { hostname, ip, originalUrl } = req;
+			if (ip === '127.0.0.1') {
+				// Don't redirect connections from localhost
+				return next();
+			} else if (/^10\.0\.[\d\.]+$/.test(ip)) {
+				// AWS EBL: query for healthchecks
+				console.log(`AWS EBL? req.ip: ${ip}, req.hostname: ${hostname}`);
 				return next();
 			} else {
-				res.redirect(302, 'https://' + req.hostname + portString + req.originalUrl);
+				const redirectTo = `https://${hostname}${originalUrl}`;
+				console.error(`req.ip: ${ip}, req.hostname: ${hostname}, redirect to ${redirectTo}`);
+				res.redirect(redirectTo);
 			}
 		}
 	};
-
-	if (keystone.get('ssl') === 'force') {
-		var port = keystone.get('ssl public port') || keystone.get('ssl port');
-		if (Number(port) === 443) {
-			portString = '';
-		} else {
-			portString = ':' + port;
-		}
-		app.use(sslRedirect);
-	}
+	app.use(sslRedirect);
 };

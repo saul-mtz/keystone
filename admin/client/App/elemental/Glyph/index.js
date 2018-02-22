@@ -1,16 +1,18 @@
-import { css } from 'glamor';
+import { css, StyleSheet } from 'aphrodite/no-important';
 import React, { PropTypes } from 'react';
 
 import octicons from './octicons';
 import colors from './colors';
 import sizes from './sizes';
-import classes from './styles';
+import styles from './styles';
+
+const classes = StyleSheet.create(styles);
 
 // FIXME static octicon classes leaning on Elemental to avoid duplicate
 // font and CSS; inflating the project size
 
 function Glyph ({
-	cssStyles,
+	aphroditeStyles,
 	className,
 	color,
 	component: Component,
@@ -24,7 +26,7 @@ function Glyph ({
 		classes.glyph,
 		colorIsValidType && classes['color__' + color],
 		classes['size__' + size],
-		cssStyles
+		aphroditeStyles
 	) + ` ${octicons[name]}`;
 	if (className) {
 		props.className += (' ' + className);
@@ -40,14 +42,14 @@ function Glyph ({
 };
 
 Glyph.propTypes = {
+	aphroditeStyles: PropTypes.shape({
+		_definition: PropTypes.object,
+		_name: PropTypes.string,
+	}),
 	color: PropTypes.oneOfType([
 		PropTypes.oneOf(Object.keys(colors)),
 		PropTypes.string, // support random color strings
 	]),
-	cssStyles: PropTypes.shape({
-		_definition: PropTypes.object,
-		_name: PropTypes.string,
-	}),
 	name: PropTypes.oneOf(Object.keys(octicons)).isRequired,
 	size: PropTypes.oneOf(Object.keys(sizes)),
 };

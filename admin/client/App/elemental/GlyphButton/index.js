@@ -1,6 +1,7 @@
 /* eslint quote-props: ["error", "as-needed"] */
 
 import React, { PropTypes } from 'react';
+import { StyleSheet } from 'aphrodite/no-important';
 import Button from '../Button';
 import Glyph from '../Glyph';
 
@@ -28,7 +29,7 @@ function GlyphButton ({
 
 	const icon = (
 		<Glyph
-			cssStyles={classes.glyph}
+			aphroditeStyles={classes.glyph}
 			color={glyphColor}
 			name={glyph}
 			size={glyphSize}
@@ -60,12 +61,12 @@ GlyphButton.defaultProps = {
 	position: 'default', // no margin, assumes no children
 };
 
-const classes = {
+const classes = StyleSheet.create({
 	glyph: {
 		display: 'inline-block',
 		marginTop: '-0.125em', // fix icon alignment
 		verticalAlign: 'middle',
 	},
-};
+});
 
 module.exports = GlyphButton;
